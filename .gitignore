@@ -1,1 +1,15 @@
-/Essentials
+/essentials
+node_modules/
+target/
+.anchor/
+test-ledger/
+.surfpool/
+.yarn/
+.next/
+dist/
+.env
+.env.local
+*.keypair.json
+*-keypair.json
+**/*.rs.bk
+.DS_Store
