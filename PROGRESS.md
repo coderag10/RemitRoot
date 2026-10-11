@@ -29,6 +29,14 @@ Next: deploy to devnet, `scripts/` for setup, faucet and seed data.
 Next: deploy to devnet, run setup and seed, record addresses in the README.
 Open problem: interest on a bond that matures in minutes is a fraction of a cent, so a live redemption shows about $0.00 interest.
 
+### 2026-10-11 · Deployed to devnet (Phase 4)
+- Program `4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT`, IDL uploaded on-chain. Upgrade authority and admin/issuer/mint authority: `ChD4iSPnY6y46zLwHhY3iZSUW1tAE3FortGnXjhTbfPy`.
+- Setup, seed and one full flow run on devnet; addresses in `idl/devnet.json` and the README.
+- Series 0 matures 2026-11-10. Create a short series before recording a live redemption.
+
+Next: faucet route for demo mode once `app/` exists. Admin wallet is low on SOL (about 0.56).
+Open problem: public devnet RPC returns 429s under script load; the app may want a Helius RPC.
+
 ## App
 
 ## Ideas (out of scope for now)

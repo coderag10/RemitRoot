@@ -36,6 +36,16 @@ anchor build
 anchor test
 ```
 
+## Devnet addresses
+
+| What | Address |
+|---|---|
+| Program | [`4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT`](https://explorer.solana.com/address/4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT?cluster=devnet) |
+| Test dollar mint (6 decimals, no value) | [`6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku`](https://explorer.solana.com/address/6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku?cluster=devnet) |
+| Bond series 0, "Savings Bond 2026-A" | [`8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW`](https://explorer.solana.com/address/8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW?cluster=devnet) |
+
+The same addresses are in `idl/devnet.json` for the app. Example split, $200 at 15% in one transaction: [explorer](https://explorer.solana.com/tx/2ZDmjsCmynFfhWinmKJnFLhWLiuCgK1wzDwBbzpkHME3bL1CbLWJ6znLqyKBbFC1zHgTueeVe4b8kSdNTHgTNTcg?cluster=devnet).
+
 ## Devnet scripts
 
 ```bash

@@ -1,0 +1,14 @@
+{
+  "programId": "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT",
+  "usdMint": "6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku",
+  "config": "BU1RxTScKPgbVg9JCwD6MU68RbWDb6UjmnJeyhyBu9Vq",
+  "series": [
+    {
+      "id": 0,
+      "address": "8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW",
+      "vault": "8TuAHwW5cnu95mnGyn3jEpytiLQwAyitKYbFtGftgcwA",
+      "name": "Savings Bond 2026-A",
+      "maturityTs": 1794289982
+    }
+  ]
+}

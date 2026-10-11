@@ -9,6 +9,9 @@ skip-lint = false
 [programs.localnet]
 remitroot = "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT"
 
+[programs.devnet]
+remitroot = "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT"
+
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
