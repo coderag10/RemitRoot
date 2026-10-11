@@ -101,6 +101,7 @@
   "error.rejected": "You cancelled the request in your wallet. Nothing was sent.",
   "error.noSol": "This wallet has no test SOL for fees. Get test dollars first, which also adds a little SOL.",
   "error.faucetEmpty": "The demo faucet is out of funds right now. Please tell the team.",
+  "error.faucetLimit": "Too many practice wallets were requested from this network. Wait a few minutes and try again.",
   "error.faucetOff": "The demo faucet is not set up on this server.",
   "error.SaveShareTooHigh": "The savings share cannot be more than 50%.",
   "error.ZeroAmount": "Enter an amount greater than zero.",

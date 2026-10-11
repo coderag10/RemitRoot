@@ -1,11 +1,12 @@
 // Client for the remitroot program: addresses, reads and transaction builders.
 import { BN, Program } from "@anchor-lang/core";
 import {
+  AccountLayout,
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction, type AccountInfo } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { RPC_URL, SECONDS_PER_YEAR, USD_MINT } from "./config";
 import idl from "./idl/remitroot.json";
@@ -49,9 +50,15 @@ export type Series = {
   proceedsCount: number;
 };
 
-export async function fetchSeries(id: number): Promise<Series | null> {
-  const address = seriesPda(id);
-  const account = await program.account.bondSeries.fetchNullable(address);
+type Raw = AccountInfo<Buffer> | null;
+type Decoded<Name extends "bondSeries" | "splitRule" | "position"> = Awaited<
+  ReturnType<(typeof program.account)[Name]["fetch"]>
+>;
+const decode = <Name extends "bondSeries" | "splitRule" | "position">(name: Name, raw: Raw) =>
+  raw && raw.owner.equals(programId) ? (program.coder.accounts.decode(name, raw.data) as Decoded<Name>) : null;
+
+function parseSeries(id: number, address: PublicKey, raw: Raw): Series | null {
+  const account = decode("bondSeries", raw);
   if (!account) return null;
   return {
     id,
@@ -78,8 +85,8 @@ export type Rule = {
   transferCount: number;
 };
 
-export async function fetchRule(worker: PublicKey): Promise<Rule | null> {
-  const account = await program.account.splitRule.fetchNullable(rulePda(worker));
+function parseRule(raw: Raw): Rule | null {
+  const account = decode("splitRule", raw);
   if (!account) return null;
   return {
     recipient: account.recipient,
@@ -93,8 +100,8 @@ export async function fetchRule(worker: PublicKey): Promise<Rule | null> {
 
 export type Position = { principal: bigint; accruedInterest: bigint; lastAccrualTs: number };
 
-export async function fetchPosition(worker: PublicKey, series: PublicKey): Promise<Position | null> {
-  const account = await program.account.position.fetchNullable(positionPda(worker, series));
+function parsePosition(raw: Raw): Position | null {
+  const account = decode("position", raw);
   if (!account) return null;
   return {
     principal: big(account.principal),
@@ -103,16 +110,39 @@ export async function fetchPosition(worker: PublicKey, series: PublicKey): Promi
   };
 }
 
-/** Test-dollar balance of `owner`; zero when the account does not exist yet. */
-export async function fetchUsdBalance(owner: PublicKey): Promise<bigint> {
-  return fetchTokenAmount(usdAccount(owner));
+/** A token account's amount; zero when the account does not exist yet. */
+const parseTokenAmount = (raw: Raw): bigint => (raw ? AccountLayout.decode(raw.data).amount : BigInt(0));
+
+/**
+ * Everything the send page shows, read in one request. The public test network limits
+ * requests, so the pages ask for accounts in batches.
+ */
+export async function fetchSendState(seriesId: number, worker: PublicKey, family: PublicKey | null) {
+  const seriesAddress = seriesPda(seriesId);
+  const addresses = [seriesAddress, rulePda(worker), positionPda(worker, seriesAddress), usdAccount(worker)];
+  if (family) addresses.push(usdAccount(family));
+  const raw = await connection.getMultipleAccountsInfo(addresses);
+  const series = parseSeries(seriesId, seriesAddress, raw[0]);
+  if (!series) return null;
+  const rule = parseRule(raw[1]);
+  // A connected wallet's family is whoever its saved rule names.
+  const recipient = family ?? rule?.recipient ?? null;
+  const familyBalance = family
+    ? parseTokenAmount(raw[4])
+    : recipient
+      ? parseTokenAmount(await connection.getAccountInfo(usdAccount(recipient)))
+      : null;
+  return { series, rule, position: parsePosition(raw[2]), balance: parseTokenAmount(raw[3]), familyBalance };
 }
 
-export async function fetchTokenAmount(tokenAccount: PublicKey): Promise<bigint> {
-  const info = await connection.getAccountInfo(tokenAccount);
-  if (!info) return BigInt(0);
-  const balance = await connection.getTokenAccountBalance(tokenAccount);
-  return BigInt(balance.value.amount);
+/** The public bond page: the series, what its vault holds, how funds were used, what is owed. */
+export async function fetchBondState(seriesId: number, now: number) {
+  const seriesAddress = seriesPda(seriesId);
+  const raw = await connection.getMultipleAccountsInfo([seriesAddress, vaultPda(seriesAddress)]);
+  const series = parseSeries(seriesId, seriesAddress, raw[0]);
+  if (!series) return null;
+  const [proceeds, owed] = await Promise.all([fetchProceeds(series), fetchOwed(series, now)]);
+  return { series, vault: parseTokenAmount(raw[1]), proceeds, owed };
 }
 
 export type ProceedsRecord = { index: number; address: PublicKey; amount: bigint; purpose: string; ts: number };

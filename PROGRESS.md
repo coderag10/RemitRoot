@@ -57,7 +57,7 @@ Scope agreed with the user for the one-day deadline: landing, `/send` and `/bond
 - Next.js 16.4 (Turbopack, Cache Components on), Tailwind 4, wallet adapter, `@anchor-lang/core` 1.1.2.
 - `/send`: split slider with live amounts and 12-month illustration, send, success panel with explorer link, savings card with redeem, family wallet card. The split rule is set in the same transaction as the send when it is new or changed.
 - `/bond/[id]`: raised against cap, savers, vault against what is owed, use-of-funds list.
-- Demo mode: practice keys in memory only. `/api/faucet` signs with a dedicated faucet key from `FAUCET_SECRET_KEY` and tops a wallet up to 1,000 test dollars and 0.006 SOL.
+- Demo mode: practice keys generated in the browser. `/api/faucet` signs with a dedicated faucet key from `FAUCET_SECRET_KEY` and tops a wallet up to 1,000 test dollars and 0.006 SOL.
 - All text is in `app/i18n/en.json`; the banner is in the root layout.
 - Checked: `yarn lint` and `yarn build` clean. On a local validator, a script drove the app's own client code and the faucet route through faucet, three sends, early and unfunded redeem errors, and redeem; client interest matched the program to the unit. Bond reads checked against devnet.
 - Not checked: the pages in a real browser, a connected wallet, and the faucet on devnet (no faucet key there yet).
@@ -68,7 +68,6 @@ Open problems:
 - Redeem fails with `VaultInsufficient` until interest is paid into the vault. Before a recorded redemption, create a short series, open `/send?series=N`, and pay interest in (as `run-flow.ts` does).
 - A demo visitor costs the faucet about 0.01 SOL, so 0.3 SOL covers roughly 30 visitors.
 - A local validator plus a Next build runs this 4 GB machine out of memory; run one at a time.
-- Setting `turbopack.root` to `app/` made Turbopack write to `app/app/.next`, so the "multiple lockfiles" build warning is left in place.
 
 ### 2026-10-11 · Phase 5 finished for the reduced scope
 - Faucet wallet `GTinnxeun8bWNJq7UETrHa4fDmJu4p7VMXZqWrEaBfta` funded on devnet with 100,000 test dollars and 0.5 SOL. Its key is in `~/.config/solana/remitroot-faucet.json` and `app/.env.local` (git-ignored). Vercel will need `FAUCET_SECRET_KEY` set by hand.
@@ -82,6 +81,18 @@ Not checked: a connected wallet (Phantom or similar) in a real browser; only dem
 Recording a live redemption: `yarn setup:devnet --maturity-minutes 3 --name "..."`, open `/send?series=N`, "Try the demo", send, `yarn pay-interest --series N`, wait, redeem. Interest on a bond that short shows as $0.00.
 
 Next: Phase 6 (ten clean runs, failure handling, Vercel deploy on approval).
+
+### 2026-10-11 · Phase 6, local part: hardening and ten clean runs
+- Ten full runs in a row (practice wallet, send, redeem) through the app at 375px against devnet, on series 5: all clean, 3 to 6 s from page load to confirmed send. Amounts covered 0%, 5% to 50% and odd cents; every figure on screen matched the split.
+- First attempt (series 4) worked but was slowed to 8 to 13 s by 429s from the public devnet RPC. Fix: each page now reads its accounts in one batched request (was seven), and the faucet route in one (was five).
+- Refresh mid-flow: the practice wallet is now kept in `sessionStorage` for the tab, so a refresh keeps the wallet and its savings. **Change from `05-architecture.md`**, which said memory only. It is cleared by "Leave demo" and when the tab closes.
+- Faucet: 20 requests per 10 minutes per network address (best effort, per server instance), `maxDuration` 30 s.
+- Messages checked: wallet with no SOL, rejected signature, expired transaction, faucet limit.
+- `cargo fmt --check`, `cargo clippy --all-targets`, `yarn lint`, `yarn build`: zero warnings. The lockfile warning is gone (`turbopack.root` set to the repo root).
+- Faucet wallet is at 0.30 SOL, about 30 more visitors. Top up with `yarn faucet GTinnxeun8bWNJq7UETrHa4fDmJu4p7VMXZqWrEaBfta --usd 0 --sol 0.5`. Admin has 2.99 SOL.
+
+Not checked: connected-wallet mode in a real wallet.
+Next: deploy to Vercel (needs approval), set `FAUCET_SECRET_KEY` there, repeat the ten runs on the public URL.
 
 ## Ideas (out of scope for now)
 

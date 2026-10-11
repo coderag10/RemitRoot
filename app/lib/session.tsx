@@ -3,7 +3,7 @@
 // The wallet the visitor acts with: a connected wallet, or a practice wallet made for the demo.
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { connection } from "./program";
 
 export type Session = {
@@ -42,18 +42,66 @@ async function confirm(signature: string, blockhash: string, lastValidBlockHeigh
   return signature;
 }
 
+type Demo = { worker: Keypair; family: PublicKey };
+
+// The practice wallet is kept for this browser tab only, so a refresh mid-flow does not lose
+// the savings. It holds valueless test tokens and is gone when the tab closes.
+const DEMO_KEY = "remitroot-demo";
+let demoState: Demo | null | undefined;
+const demoListeners = new Set<() => void>();
+
+function readDemo(): Demo | null {
+  if (demoState !== undefined) return demoState;
+  demoState = null;
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(DEMO_KEY) ?? "null");
+    if (stored) {
+      demoState = {
+        worker: Keypair.fromSecretKey(Uint8Array.from(stored.worker)),
+        family: new PublicKey(stored.family),
+      };
+    }
+  } catch {
+    // Storage is blocked or the entry is damaged: start without a practice wallet.
+  }
+  return demoState;
+}
+
+function writeDemo(demo: Demo | null) {
+  demoState = demo;
+  try {
+    if (demo) {
+      sessionStorage.setItem(
+        DEMO_KEY,
+        JSON.stringify({ worker: Array.from(demo.worker.secretKey), family: demo.family.toBase58() }),
+      );
+    } else {
+      sessionStorage.removeItem(DEMO_KEY);
+    }
+  } catch {
+    // Without storage the wallet still works until the page is refreshed.
+  }
+  demoListeners.forEach((listener) => listener());
+}
+
+function subscribeDemo(listener: () => void) {
+  demoListeners.add(listener);
+  return () => {
+    demoListeners.delete(listener);
+  };
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const wallet = useWallet();
-  // Practice keys live in memory only and are gone on refresh.
-  const [demo, setDemo] = useState<{ worker: Keypair; family: PublicKey } | null>(null);
+  const demo = useSyncExternalStore(subscribeDemo, readDemo, () => null);
 
   const startDemo = useCallback(async () => {
     const worker = Keypair.generate();
     const family = Keypair.generate().publicKey;
     await requestFaucet(worker.publicKey, family);
-    setDemo({ worker, family });
+    writeDemo({ worker, family });
   }, []);
-  const leaveDemo = useCallback(() => setDemo(null), []);
+  const leaveDemo = useCallback(() => writeDemo(null), []);
 
   const session = useMemo<Session | null>(() => {
     if (demo) {

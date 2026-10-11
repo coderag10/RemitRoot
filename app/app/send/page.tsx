@@ -13,14 +13,7 @@ import { errorText } from "@/lib/errors";
 import { formatUsd, parseUsd, shortAddress } from "@/lib/format";
 import { useLoad, useNow } from "@/lib/hooks";
 import { t } from "@/lib/i18n";
-import {
-  buildSendTransaction,
-  fetchPosition,
-  fetchRule,
-  fetchSeries,
-  fetchUsdBalance,
-  split,
-} from "@/lib/program";
+import { buildSendTransaction, fetchSendState, split } from "@/lib/program";
 import { requestFaucet, useSession, type Session } from "@/lib/session";
 
 function parseAddress(text: string): PublicKey | null {
@@ -35,18 +28,10 @@ type Sent = { signature: string; family: bigint; saved: bigint; seconds: string 
 
 function SendFlow({ session, seriesId }: { session: Session; seriesId: number }) {
   const now = useNow();
-  const load = useCallback(async () => {
-    const series = await fetchSeries(seriesId);
-    if (!series) return null;
-    const [rule, position, balance] = await Promise.all([
-      fetchRule(session.publicKey),
-      fetchPosition(session.publicKey, series.address),
-      fetchUsdBalance(session.publicKey),
-    ]);
-    const family = session.family ?? rule?.recipient ?? null;
-    const familyBalance = family ? await fetchUsdBalance(family) : null;
-    return { series, rule, position, balance, familyBalance };
-  }, [session, seriesId]);
+  const load = useCallback(
+    () => fetchSendState(seriesId, session.publicKey, session.family),
+    [session, seriesId],
+  );
   const { data, error: loadError, loading, reload } = useLoad(load);
 
   const [amountText, setAmountText] = useState("200");

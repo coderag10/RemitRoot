@@ -30,6 +30,8 @@ Set these in `.env.local` (never committed) or in the host's settings.
 | `NEXT_PUBLIC_SERIES_ID` | no | Default bond series. Defaults to 0. |
 | `NEXT_PUBLIC_USD_MINT` | no | Test dollar mint, for a local validator. |
 
+The practice wallet made by "Try the demo" is kept in the tab's `sessionStorage`, so a refresh does not lose it. It holds test tokens only.
+
 The faucet wallet holds its own stock of test dollars and SOL. Fund it from the repo root:
 
 ```bash

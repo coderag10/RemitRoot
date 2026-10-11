@@ -8,21 +8,15 @@ import { errorText } from "@/lib/errors";
 import { formatDate, formatUsd } from "@/lib/format";
 import { useLoad, useNow } from "@/lib/hooks";
 import { t } from "@/lib/i18n";
-import { fetchOwed, fetchProceeds, fetchSeries, fetchTokenAmount } from "@/lib/program";
+import { fetchBondState } from "@/lib/program";
 
 function Bond() {
   const { id } = useParams<{ id: string }>();
   const now = useNow(30_000);
-  const load = useCallback(async () => {
-    const series = /^\d+$/.test(id) ? await fetchSeries(Number(id)) : null;
-    if (!series) return null;
-    const [vault, proceeds, owed] = await Promise.all([
-      fetchTokenAmount(series.vault),
-      fetchProceeds(series),
-      fetchOwed(series, Math.floor(Date.now() / 1000)),
-    ]);
-    return { series, vault, proceeds, owed };
-  }, [id]);
+  const load = useCallback(
+    async () => (/^\d+$/.test(id) ? fetchBondState(Number(id), Math.floor(Date.now() / 1000)) : null),
+    [id],
+  );
   const { data, error, loading, reload } = useLoad(load);
 
   if (loading && !data) {
