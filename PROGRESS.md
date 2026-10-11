@@ -51,6 +51,26 @@ Next: Phase 5 app. Create a fresh short series (`yarn setup:devnet --maturity-mi
 
 ## App
 
+### 2026-10-11 · Phase 5, reduced scope: core flow
+Scope agreed with the user for the one-day deadline: landing, `/send` and `/bond/[id]`, English only.
+
+- Next.js 16.4 (Turbopack, Cache Components on), Tailwind 4, wallet adapter, `@anchor-lang/core` 1.1.2.
+- `/send`: split slider with live amounts and 12-month illustration, send, success panel with explorer link, savings card with redeem, family wallet card. The split rule is set in the same transaction as the send when it is new or changed.
+- `/bond/[id]`: raised against cap, savers, vault against what is owed, use-of-funds list.
+- Demo mode: practice keys in memory only. `/api/faucet` signs with a dedicated faucet key from `FAUCET_SECRET_KEY` and tops a wallet up to 1,000 test dollars and 0.006 SOL.
+- All text is in `app/i18n/en.json`; the banner is in the root layout.
+- Checked: `yarn lint` and `yarn build` clean. On a local validator, a script drove the app's own client code and the faucet route through faucet, three sends, early and unfunded redeem errors, and redeem; client interest matched the program to the unit. Bond reads checked against devnet.
+- Not checked: the pages in a real browser, a connected wallet, and the faucet on devnet (no faucet key there yet).
+
+Cut from Phase 5: `/family` and `/issuer` pages (family balance is on `/send`; issuer uses scripts), Nepali toggle, transaction history.
+
+Next: user creates the faucet key, funds it with `yarn faucet`, sets `FAUCET_SECRET_KEY`; then click through in a browser at 375px, then Phase 6.
+Open problems:
+- Redeem fails with `VaultInsufficient` until interest is paid into the vault. Before a recorded redemption, create a short series, open `/send?series=N`, and pay interest in (as `run-flow.ts` does).
+- A demo visitor costs the faucet about 0.01 SOL, so 0.3 SOL covers roughly 30 visitors.
+- A local validator plus a Next build runs this 4 GB machine out of memory; run one at a time.
+- Setting `turbopack.root` to `app/` made Turbopack write to `app/app/.next`, so the "multiple lockfiles" build warning is left in place.
+
 ## Ideas (out of scope for now)
 
 - `claim_interest`, `repay`, `set_paused`, savings goal, early exit.

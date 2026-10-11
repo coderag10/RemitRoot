@@ -1,14 +1,21 @@
 {
-  "name": "app",
+  "name": "remitroot-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync-idl": "cp ../idl/remitroot.json ../idl/remitroot.ts lib/idl/"
   },
   "dependencies": {
+    "@anchor-lang/core": "1.1.2",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/wallet-adapter-base": "^0.9.28",
+    "@solana/wallet-adapter-react": "^0.15.40",
+    "@solana/wallet-adapter-react-ui": "^0.9.40",
+    "@solana/web3.js": "^1.98.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

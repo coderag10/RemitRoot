@@ -12,6 +12,7 @@ RemitRoot puts saving inside the remittance. A worker sets a rule once; every tr
 programs/remitroot/        Anchor program (Rust)
 programs/remitroot/tests/  Program tests (Rust, LiteSVM)
 idl/                       IDL and TypeScript types for the app
+app/                       Web app (Next.js): landing, send, public bond page
 scripts/                   Devnet setup, faucet, seed data, full-flow run
 essentials/                Planning documents (not committed)
 ```
@@ -35,6 +36,14 @@ Needs Rust, the Solana CLI and Anchor 1.1.x.
 anchor build
 anchor test
 ```
+
+## Web app
+
+```bash
+cd app && yarn install && yarn dev
+```
+
+"Try the demo" makes a practice wallet in the browser and asks the app's faucet for test dollars, so no wallet is needed. Setup and environment variables are in [`app/README.md`](app/README.md).
 
 ## Devnet addresses
 
