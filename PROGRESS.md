@@ -102,6 +102,12 @@ Next: deploy to Vercel (needs approval), set `FAUCET_SECRET_KEY` there, repeat t
 Not checked: connected-wallet mode in a real wallet extension.
 Next: Phase 7 (final README, pitch script, demo script). Phase 6b (Surfpool) is optional.
 
+### 2026-10-11 · Phase 7: final README
+- README rewritten: problem, solution, how it works, architecture diagram (Mermaid), accounts, instructions, rules, how to run, devnet addresses, limits of the prototype, path to real use, disclaimer, numbered sources. Every figure is from `09-facts-and-sources.md`; 2015 and 2016 figures carry their year.
+- Added `LICENSE` (MIT, "RemitRoot contributors"); change the holder name if the team wants another.
+
+Next: pitch script and technical demo script. Before submitting, open each source link and confirm it, as file 09 asks.
+
 ## Ideas (out of scope for now)
 
 - `claim_interest`, `repay`, `set_paused`, savings goal, early exit.
