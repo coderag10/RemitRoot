@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { explorerTx } from "@/lib/config";
 import { errorText } from "@/lib/errors";
 import { formatDate, formatUsd } from "@/lib/format";
 import { t } from "@/lib/i18n";
@@ -26,7 +27,7 @@ export function SavingsCard({
 }) {
   const [redeeming, setRedeeming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [redeemed, setRedeemed] = useState<bigint | null>(null);
+  const [redeemed, setRedeemed] = useState<{ amount: bigint; signature: string } | null>(null);
   const matured = now >= series.maturityTs;
   const interest = position ? interestSoFar(position, series, now) : BigInt(0);
 
@@ -35,8 +36,8 @@ export function SavingsCard({
     setRedeeming(true);
     setError(null);
     try {
-      await session.send(await buildRedeemTransaction(session.publicKey, series));
-      setRedeemed(position.principal + interest);
+      const signature = await session.send(await buildRedeemTransaction(session.publicKey, series));
+      setRedeemed({ amount: position.principal + interest, signature });
       onChanged();
     } catch (cause) {
       setError(errorText(cause));
@@ -50,7 +51,10 @@ export function SavingsCard({
       <h2 className="text-heading font-semibold text-root-deep">{t("savings.title")}</h2>
       {redeemed !== null && (
         <p role="status" className="font-semibold text-leaf">
-          ✓ {t("savings.redeemed", { amount: formatUsd(redeemed) })}
+          ✓ {t("savings.redeemed", { amount: formatUsd(redeemed.amount) })}{" "}
+          <a href={explorerTx(redeemed.signature)} target="_blank" rel="noreferrer" className="text-root underline">
+            {t("sent.explorer")}
+          </a>
         </p>
       )}
       {position && position.principal > BigInt(0) ? (

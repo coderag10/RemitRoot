@@ -64,6 +64,7 @@ yarn setup:devnet --maturity-minutes 5  # add a short series for a live redempti
 yarn seed                               # sample savers and use-of-funds records
 yarn faucet <address> --usd 1000 --sol 0.05
 yarn flow --redeem true                 # one full run with explorer links
+yarn pay-interest --series 3 --usd 1    # issuer pays interest into a vault so savers can redeem
 ```
 
 Addresses are written to `idl/devnet.json`. The scripts refuse to run against mainnet.

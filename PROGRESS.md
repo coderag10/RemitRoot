@@ -64,12 +64,24 @@ Scope agreed with the user for the one-day deadline: landing, `/send` and `/bond
 
 Cut from Phase 5: `/family` and `/issuer` pages (family balance is on `/send`; issuer uses scripts), Nepali toggle, transaction history.
 
-Next: user creates the faucet key, funds it with `yarn faucet`, sets `FAUCET_SECRET_KEY`; then click through in a browser at 375px, then Phase 6.
 Open problems:
 - Redeem fails with `VaultInsufficient` until interest is paid into the vault. Before a recorded redemption, create a short series, open `/send?series=N`, and pay interest in (as `run-flow.ts` does).
 - A demo visitor costs the faucet about 0.01 SOL, so 0.3 SOL covers roughly 30 visitors.
 - A local validator plus a Next build runs this 4 GB machine out of memory; run one at a time.
 - Setting `turbopack.root` to `app/` made Turbopack write to `app/app/.next`, so the "multiple lockfiles" build warning is left in place.
+
+### 2026-10-11 · Phase 5 finished for the reduced scope
+- Faucet wallet `GTinnxeun8bWNJq7UETrHa4fDmJu4p7VMXZqWrEaBfta` funded on devnet with 100,000 test dollars and 0.5 SOL. Its key is in `~/.config/solana/remitroot-faucet.json` and `app/.env.local` (git-ignored). Vercel will need `FAUCET_SECRET_KEY` set by hand.
+- Browser check at 375px with Playwright (headless Chromium) against devnet: landing to a confirmed send in 4.5 s with no wallet; no console errors, no horizontal overflow. Then on series 3 (2.5-minute bond): send, wait for maturity, redeem refused while the vault held principal only, `yarn pay-interest`, redeem paid out.
+- Fixes from the screenshots: balances refresh before the "Sent" panel shows; starting the demo on `/send?series=N` keeps the series; wallet button restyled; explorer link added for redemptions.
+- New `scripts/pay-interest.ts` (`yarn pay-interest --series N --usd 1`).
+- `playwright` is a dev dependency at the repo root (it landed there, not in `app/`). Chromium's missing system libraries are unpacked in `~/.cache/remitroot-chromium-libs`; run with `LD_LIBRARY_PATH` pointing at its `usr/lib/x86_64-linux-gnu`.
+
+Not checked: a connected wallet (Phantom or similar) in a real browser; only demo mode was driven.
+
+Recording a live redemption: `yarn setup:devnet --maturity-minutes 3 --name "..."`, open `/send?series=N`, "Try the demo", send, `yarn pay-interest --series N`, wait, redeem. Interest on a bond that short shows as $0.00.
+
+Next: Phase 6 (ten clean runs, failure handling, Vercel deploy on approval).
 
 ## Ideas (out of scope for now)
 

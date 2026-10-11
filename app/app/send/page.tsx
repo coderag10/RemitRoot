@@ -100,8 +100,10 @@ function SendFlow({ session, seriesId }: { session: Session; seriesId: number })
         currentRule: rule,
       });
       const signature = await session.send(tx);
-      setSent({ signature, ...split(amount, saveBps), seconds: ((Date.now() - started) / 1000).toFixed(1) });
+      const seconds = ((Date.now() - started) / 1000).toFixed(1);
+      // Refresh first, so the balances beside the confirmation already include this transfer.
       await reload();
+      setSent({ signature, ...split(amount, saveBps), seconds });
     } catch (cause) {
       setError(errorText(cause));
     } finally {
