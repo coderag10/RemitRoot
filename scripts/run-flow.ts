@@ -1,6 +1,6 @@
 // One full run of the core flow with a fresh worker: fund, set rule, send, and optionally redeem.
 //   yarn flow [--series 0] [--amount 200] [--save-bps 1500] [--redeem true]
-import { getAccount } from "@solana/spl-token";
+import { getAccount, mintTo } from "@solana/spl-token";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import {
   connect,
@@ -70,6 +70,8 @@ run(async () => {
     console.log(`3. Waiting ${Math.ceil(waitMs / 1000)}s for maturity...`);
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
+  // The vault holds principal only; the issuer pays in the interest before savers can redeem.
+  await mintTo(connection, admin, usdMint, series.vault, admin, BigInt(usd(1).toString()));
   const redeemSig = await program.methods
     .redeem()
     .accountsPartial({

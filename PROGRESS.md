@@ -44,6 +44,11 @@ Open problem: public devnet RPC returns 429s under script load; the app may want
 
 Next: Phase 5 app. Create a fresh short series (`yarn setup:devnet --maturity-minutes N`) right before recording a live redemption.
 
+### 2026-10-11 · Redemption proven on devnet
+- Series 2 (3-minute bond): set rule, send $200 at 15%, redeem after maturity all succeeded.
+- First attempt on series 1 was refused with `VaultInsufficient`, as designed: the vault held principal only. `run-flow.ts` now pays $1 of interest into the vault before redeeming. One $30 test position is stranded in series 1.
+- Scripts now default to the newest series that has not matured (series 0). The app should use series 0.
+
 ## App
 
 ## Ideas (out of scope for now)

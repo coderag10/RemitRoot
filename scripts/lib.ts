@@ -71,10 +71,14 @@ export function saveAddresses(addresses: Addresses) {
   fs.writeFileSync(ADDRESSES_FILE, JSON.stringify(addresses, null, 2) + "\n");
 }
 
-/** Picks a series by id, or the newest when no id is given. */
+/** Picks a series by id, or the newest one still open for savings when no id is given. */
 export function pickSeries(addresses: Addresses, id?: number) {
-  const series = id === undefined ? addresses.series.at(-1) : addresses.series.find((s) => s.id === id);
-  if (!series) throw new Error(`Series ${id} is not in ${ADDRESSES_FILE}`);
+  const now = Date.now() / 1000;
+  const series =
+    id === undefined
+      ? addresses.series.findLast((s) => s.maturityTs > now)
+      : addresses.series.find((s) => s.id === id);
+  if (!series) throw new Error(`No open series${id === undefined ? "" : ` with id ${id}`} in ${ADDRESSES_FILE}`);
   return { ...series, address: new PublicKey(series.address), vault: new PublicKey(series.vault) };
 }
 
