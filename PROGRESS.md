@@ -94,6 +94,14 @@ Next: Phase 6 (ten clean runs, failure handling, Vercel deploy on approval).
 Not checked: connected-wallet mode in a real wallet.
 Next: deploy to Vercel (needs approval), set `FAUCET_SECRET_KEY` there, repeat the ten runs on the public URL.
 
+### 2026-10-11 · Phase 6 done: ten clean runs on the public URL
+- App is live at https://remit-root-mocha.vercel.app (Vercel, root directory `app`, `FAUCET_SECRET_KEY` set there).
+- Ten full runs in a row (practice wallet, send, redeem) at 375px against the public URL on series 6: all clean, 3.3 to 6.8 s from page load to confirmed send, no rate-limit messages. Refresh mid-flow kept the wallet in both runs that tried it.
+- Faucet wallet is at 0.20 SOL, about 20 more visitors. Top up before judging: `yarn faucet GTinnxeun8bWNJq7UETrHa4fDmJu4p7VMXZqWrEaBfta --usd 0 --sol 0.5`.
+
+Not checked: connected-wallet mode in a real wallet extension.
+Next: Phase 7 (final README, pitch script, demo script). Phase 6b (Surfpool) is optional.
+
 ## Ideas (out of scope for now)
 
 - `claim_interest`, `repay`, `set_paused`, savings goal, early exit.

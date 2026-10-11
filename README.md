@@ -39,6 +39,8 @@ anchor test
 
 ## Web app
 
+Live on devnet: **https://remit-root-mocha.vercel.app**
+
 ```bash
 cd app && yarn install && yarn dev
 ```

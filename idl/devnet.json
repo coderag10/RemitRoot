@@ -44,6 +44,13 @@
       "vault": "4L7Y7C34hSBN2huBpRsGU39gPpMCVDMvGGy3qAgsYPj2",
       "name": "Savings Bond Demo 5",
       "maturityTs": 1791706730
+    },
+    {
+      "id": 6,
+      "address": "5cgbs5TvCR4Q4LtqRysbSFLejGF8fufqh65AkCW8CiLC",
+      "vault": "81ESwXMG31YAMkB3T54AaE68vagVtEpdSHRHeAThJTGr",
+      "name": "Savings Bond Demo 6",
+      "maturityTs": 1791708734
     }
   ]
 }
