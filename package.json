@@ -1,0 +1,22 @@
+{
+  "name": "remitroot",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "setup:devnet": "tsx scripts/setup-devnet.ts",
+    "faucet": "tsx scripts/faucet.ts",
+    "seed": "tsx scripts/seed-demo.ts",
+    "flow": "tsx scripts/run-flow.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anchor-lang/core": "1.1.2",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.98.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

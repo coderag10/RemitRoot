@@ -15,7 +15,7 @@ pub struct WithdrawProceeds<'info> {
     #[account(mut)]
     pub issuer: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump = config.bump, has_one = usd_mint)]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
     #[account(
         mut,
         seeds = [SERIES_SEED, series.id.to_le_bytes().as_ref()],
@@ -23,7 +23,7 @@ pub struct WithdrawProceeds<'info> {
         has_one = issuer @ ErrorCode::NotIssuer,
         has_one = vault,
     )]
-    pub series: Account<'info, BondSeries>,
+    pub series: Box<Account<'info, BondSeries>>,
     #[account(
         init,
         payer = issuer,
@@ -35,17 +35,17 @@ pub struct WithdrawProceeds<'info> {
         ],
         bump
     )]
-    pub record: Account<'info, ProceedsRecord>,
-    pub usd_mint: InterfaceAccount<'info, Mint>,
+    pub record: Box<Account<'info, ProceedsRecord>>,
+    pub usd_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         mut,
         token::mint = usd_mint,
         token::authority = issuer,
         token::token_program = token_program,
     )]
-    pub issuer_token: InterfaceAccount<'info, TokenAccount>,
+    pub issuer_token: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }

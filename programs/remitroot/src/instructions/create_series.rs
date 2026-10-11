@@ -19,7 +19,7 @@ pub struct CreateSeries<'info> {
         has_one = admin @ ErrorCode::NotAdmin,
         has_one = usd_mint,
     )]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
     /// CHECK: only stored as the series issuer; it signs nothing here.
     pub issuer: UncheckedAccount<'info>,
     #[account(
@@ -29,7 +29,7 @@ pub struct CreateSeries<'info> {
         seeds = [SERIES_SEED, config.series_count.to_le_bytes().as_ref()],
         bump
     )]
-    pub series: Account<'info, BondSeries>,
+    pub series: Box<Account<'info, BondSeries>>,
     #[account(
         init,
         payer = admin,
@@ -39,8 +39,8 @@ pub struct CreateSeries<'info> {
         token::authority = series,
         token::token_program = token_program,
     )]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
-    pub usd_mint: InterfaceAccount<'info, Mint>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub usd_mint: Box<InterfaceAccount<'info, Mint>>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }

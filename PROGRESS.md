@@ -20,6 +20,15 @@ Changes from `05-architecture.md`:
 
 Next: deploy to devnet, `scripts/` for setup, faucet and seed data.
 
+### 2026-10-11 · Tests green, scripts written (Phase 4, before deploy)
+- All 11 tests pass. First run failed 9 of 11 with a stack overflow in `send_remittance`; fixed by boxing the accounts.
+- IDL and TypeScript types are committed in `idl/` for the app.
+- `scripts/`: `setup-devnet.ts`, `faucet.ts`, `seed-demo.ts`, `run-flow.ts`. Run end to end on a local validator (set rule, send, withdraw, redeem).
+- The JS client does not auto-fill `tokenProgram`; every call must pass it.
+
+Next: deploy to devnet, run setup and seed, record addresses in the README.
+Open problem: interest on a bond that matures in minutes is a fraction of a cent, so a live redemption shows about $0.00 interest.
+
 ## App
 
 ## Ideas (out of scope for now)

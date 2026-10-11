@@ -15,7 +15,7 @@ pub struct SendRemittance<'info> {
     #[account(mut)]
     pub worker: Signer<'info>,
     #[account(seeds = [CONFIG_SEED], bump = config.bump, has_one = usd_mint)]
-    pub config: Account<'info, Config>,
+    pub config: Box<Account<'info, Config>>,
     #[account(
         mut,
         seeds = [RULE_SEED, worker.key().as_ref()],
@@ -23,14 +23,14 @@ pub struct SendRemittance<'info> {
         has_one = worker,
         has_one = series @ ErrorCode::WrongSeries,
     )]
-    pub rule: Account<'info, SplitRule>,
+    pub rule: Box<Account<'info, SplitRule>>,
     #[account(
         mut,
         seeds = [SERIES_SEED, series.id.to_le_bytes().as_ref()],
         bump = series.bump,
         has_one = vault,
     )]
-    pub series: Account<'info, BondSeries>,
+    pub series: Box<Account<'info, BondSeries>>,
     #[account(
         init_if_needed,
         payer = worker,
@@ -38,15 +38,15 @@ pub struct SendRemittance<'info> {
         seeds = [POSITION_SEED, worker.key().as_ref(), series.key().as_ref()],
         bump
     )]
-    pub position: Account<'info, Position>,
-    pub usd_mint: InterfaceAccount<'info, Mint>,
+    pub position: Box<Account<'info, Position>>,
+    pub usd_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         mut,
         token::mint = usd_mint,
         token::authority = worker,
         token::token_program = token_program,
     )]
-    pub worker_token: InterfaceAccount<'info, TokenAccount>,
+    pub worker_token: Box<InterfaceAccount<'info, TokenAccount>>,
     /// Must be a token account owned by the recipient named in the rule.
     #[account(
         mut,
@@ -54,9 +54,9 @@ pub struct SendRemittance<'info> {
         token::authority = rule.recipient,
         token::token_program = token_program,
     )]
-    pub recipient_token: InterfaceAccount<'info, TokenAccount>,
+    pub recipient_token: Box<InterfaceAccount<'info, TokenAccount>>,
     #[account(mut)]
-    pub vault: InterfaceAccount<'info, TokenAccount>,
+    pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
