@@ -37,6 +37,13 @@ Open problem: interest on a bond that matures in minutes is a fraction of a cent
 Next: faucet route for demo mode once `app/` exists. Admin wallet is low on SOL (about 0.56).
 Open problem: public devnet RPC returns 429s under script load; the app may want a Helius RPC.
 
+### 2026-10-11 · Short demo series recorded
+- Series 1 "Savings Bond Demo" (`2ndXf3Z2d2DcdpvDg9Hb4vWkhTKGGSZvPTKHtwmQQtGs`) added to `idl/devnet.json`. It has already matured (2026-10-11), so it takes no new savings.
+- Its vault holds 30 tUSD from one send; no redemption was recorded. The flow script's worker key is generated in memory, so that position cannot be redeemed now.
+- 11 tests still pass.
+
+Next: Phase 5 app. Create a fresh short series (`yarn setup:devnet --maturity-minutes N`) right before recording a live redemption.
+
 ## App
 
 ## Ideas (out of scope for now)

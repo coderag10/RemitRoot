@@ -9,6 +9,13 @@
       "vault": "8TuAHwW5cnu95mnGyn3jEpytiLQwAyitKYbFtGftgcwA",
       "name": "Savings Bond 2026-A",
       "maturityTs": 1794289982
+    },
+    {
+      "id": 1,
+      "address": "2ndXf3Z2d2DcdpvDg9Hb4vWkhTKGGSZvPTKHtwmQQtGs",
+      "vault": "B1PkEGLkZNnJasYtnk1EcQsAKH6T4hJkp6kdXV4Fr4mD",
+      "name": "Savings Bond Demo",
+      "maturityTs": 1791699882
     }
   ]
 }
