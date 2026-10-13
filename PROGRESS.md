@@ -108,6 +108,14 @@ Next: Phase 7 (final README, pitch script, demo script). Phase 6b (Surfpool) is 
 
 Next: pitch script and technical demo script. Before submitting, open each source link and confirm it, as file 09 asks.
 
+### 2026-10-13 · Phase 7: pitch deck and demo script
+- `pitch/pitch-deck.md`: eight slides with on-screen text and the three-minute spoken script, demo shot list, words to avoid, judge questions.
+- `pitch/demo-script.md`: technical demo in five parts with setup, commands, lines to show and a what-to-do table for failures.
+- `pitch/` is git-ignored at the user's request, so these stay local.
+- Faucet wallet is at 0.17 SOL; top it up before recording (command is in the demo script).
+
+Next: user fills in team name on slide 8, confirms the source links, records and submits.
+
 ## Ideas (out of scope for now)
 
 - `claim_interest`, `repay`, `set_paused`, savings goal, early exit.

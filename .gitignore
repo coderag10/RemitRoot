@@ -13,3 +13,6 @@ dist/
 *-keypair.json
 **/*.rs.bk
 .DS_Store
+
+# Pitch deck and demo scripts (kept local)
+/pitch
