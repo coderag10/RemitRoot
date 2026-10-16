@@ -8,7 +8,8 @@
     "seed": "tsx scripts/seed-demo.ts",
     "flow": "tsx scripts/run-flow.ts",
     "typecheck": "tsc --noEmit",
-    "pay-interest": "tsx scripts/pay-interest.ts"
+    "issuer": "tsx scripts/issuer.ts",
+    "admin": "tsx scripts/admin.ts"
   },
   "dependencies": {
     "@anchor-lang/core": "1.1.2",

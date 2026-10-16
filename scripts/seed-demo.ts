@@ -1,32 +1,33 @@
-// Fills a series with sample savers and use-of-funds records so the public page is not empty.
-//   yarn seed [--series 0] [--savers 4]
-import { getAccount, mintTo } from "@solana/spl-token";
-import { Keypair, PublicKey } from "@solana/web3.js";
+// Fills a series with sample savers, uses of funds and a repayment, so the public page is not empty.
+// The amounts are sample data for a test bond, not real figures.
+//   yarn seed [--series 0] [--savers 6]
+import { getAccount } from "@solana/spl-token";
+import { Keypair } from "@solana/web3.js";
 import {
   connect,
   explorerTx,
   formatUsd,
   fund,
+  loadConfig,
+  loadSeries,
+  optionalNumber,
   parseArgs,
-  pickSeries,
-  positionPda,
   proceedsPda,
-  requireAddresses,
-  rulePda,
   run,
+  sendRemittance,
   tokenAccount,
   TOKEN_PROGRAM_ID,
   usd,
 } from "./lib";
 
-// Each saver sends `send` test dollars at `saveBps`.
+// Each sample saver sends `send` test dollars at `saveBps`, some with a savings goal.
 const SAVERS = [
-  { send: 200, saveBps: 1500 },
-  { send: 350, saveBps: 2000 },
-  { send: 120, saveBps: 1000 },
-  { send: 500, saveBps: 3000 },
-  { send: 250, saveBps: 2500 },
-  { send: 180, saveBps: 500 },
+  { send: 200, saveBps: 1500, goal: 1000, goalKind: 2 },
+  { send: 350, saveBps: 2000, goal: 0, goalKind: 0 },
+  { send: 120, saveBps: 1000, goal: 500, goalKind: 1 },
+  { send: 500, saveBps: 3000, goal: 2000, goalKind: 3 },
+  { send: 250, saveBps: 2500, goal: 0, goalKind: 0 },
+  { send: 180, saveBps: 500, goal: 300, goalKind: 4 },
 ];
 // Shares of the amount raised that the issuer withdraws, with the stated purpose.
 const PROCEEDS = [
@@ -36,66 +37,62 @@ const PROCEEDS = [
 
 run(async () => {
   const { flags } = parseArgs();
-  const addresses = requireAddresses();
-  const series = pickSeries(addresses, flags["series"] === undefined ? undefined : Number(flags["series"]));
-  const saverCount = Math.min(Number(flags["savers"] ?? 4), SAVERS.length);
-
-  const { admin, connection, program } = connect();
-  const programId = program.programId;
-  const usdMint = new PublicKey(addresses.usdMint);
+  const client = connect();
+  const { admin, connection, program } = client;
+  const { usdMint } = await loadConfig(client);
+  let series = await loadSeries(client, optionalNumber(flags["series"]));
+  const saverCount = Math.min(Number(flags["savers"] ?? SAVERS.length), SAVERS.length);
   console.log(`Seeding series ${series.id} "${series.name}"`);
 
-  for (const { send, saveBps } of SAVERS.slice(0, saverCount)) {
+  for (const { send, saveBps, goal, goalKind } of SAVERS.slice(0, saverCount)) {
     const worker = Keypair.generate();
-    const recipient = Keypair.generate().publicKey;
-    const workerToken = await fund(connection, admin, usdMint, worker.publicKey, send, 0.01);
-    const recipientToken = await tokenAccount(connection, admin, usdMint, recipient);
-    await program.methods
-      .setSplitRule(recipient, saveBps)
-      .accountsPartial({ worker: worker.publicKey, series: series.address })
-      .signers([worker])
-      .rpc();
-    const signature = await program.methods
-      .sendRemittance(usd(send))
-      .accountsPartial({
-        worker: worker.publicKey,
-        rule: rulePda(programId, worker.publicKey),
-        series: series.address,
-        position: positionPda(programId, worker.publicKey, series.address),
-        usdMint,
-        workerToken,
-        recipientToken,
-        vault: series.vault,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      })
-      .signers([worker])
-      .rpc();
+    await fund(connection, admin, usdMint, worker.publicKey, send, 0.01);
+    const { signature } = await sendRemittance(client, {
+      worker,
+      recipient: Keypair.generate().publicKey,
+      series: series.address,
+      vault: series.vault,
+      usdMint,
+      amount: send,
+      saveBps,
+      goalAmount: goal,
+      goalKind,
+    });
     console.log(`  saver sent $${send} at ${saveBps / 100}%: ${explorerTx(signature)}`);
   }
 
+  if (!series.issuer.equals(admin.publicKey)) {
+    console.log(`Series ${series.id} has another issuer; skipping withdrawals and repayment.`);
+    return;
+  }
   const issuerToken = await tokenAccount(connection, admin, usdMint, admin.publicKey);
-  const raised = Number((await getAccount(connection, series.vault)).amount);
+  const raised = Number((await getAccount(connection, series.vault)).amount) / 1e6;
   for (const { share, purpose } of PROCEEDS) {
-    const index = (await program.account.bondSeries.fetch(series.address)).proceedsCount;
-    const amount = Math.floor(raised * share);
+    series = await loadSeries(client, series.id);
+    const amount = Math.floor(raised * share * 100) / 100;
     const signature = await program.methods
-      .withdrawProceeds(usd(amount / 1e6), purpose)
+      .withdrawProceeds(usd(amount), purpose)
       .accountsPartial({
         issuer: admin.publicKey,
         series: series.address,
-        record: proceedsPda(programId, series.address, index),
+        record: proceedsPda(program.programId, series.address, series.proceedsCount),
         usdMint,
         issuerToken,
         vault: series.vault,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
-    console.log(`  issuer withdrew ${formatUsd(amount)} for "${purpose}": ${explorerTx(signature)}`);
+    console.log(`  issuer withdrew ${formatUsd(usd(amount))} for "${purpose}": ${explorerTx(signature)}`);
   }
 
-  // There is no repay instruction: the issuer funds interest by paying into the vault directly.
-  const reserve = Number(flags["interest-reserve"] ?? 50);
-  await mintTo(connection, admin, usdMint, series.vault, admin, BigInt(usd(reserve).toString()));
+  // The issuer pays part back, as it would ahead of interest falling due.
+  const repay = Number(flags["repay"] ?? 50);
+  await fund(connection, admin, usdMint, admin.publicKey, repay);
+  const signature = await program.methods
+    .repay(usd(repay))
+    .accountsPartial({ issuer: admin.publicKey, series: series.address, usdMint, issuerToken, vault: series.vault, tokenProgram: TOKEN_PROGRAM_ID })
+    .rpc();
   const vault = await getAccount(connection, series.vault);
-  console.log(`Added $${reserve} interest reserve. Vault now holds ${formatUsd(vault.amount)}`);
+  console.log(`  issuer repaid $${repay}: ${explorerTx(signature)}`);
+  console.log(`Vault now holds ${formatUsd(vault.amount)}`);
 });
