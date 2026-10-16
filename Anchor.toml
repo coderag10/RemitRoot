@@ -6,11 +6,11 @@ skip_local_validator = true
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-remitroot = "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT"
-
 [programs.devnet]
-remitroot = "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT"
+remitroot = "GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj"
+
+[programs.localnet]
+remitroot = "GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj"
 
 [provider]
 cluster = "localnet"

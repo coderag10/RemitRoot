@@ -49,6 +49,26 @@ Next: Phase 5 app. Create a fresh short series (`yarn setup:devnet --maturity-mi
 - First attempt on series 1 was refused with `VaultInsufficient`, as designed: the vault held principal only. `run-flow.ts` now pays $1 of interest into the vault before redeeming. One $30 test position is stranded in series 1.
 - Scripts now default to the newest series that has not matured (series 0). The app should use series 0.
 
+### 2026-10-16 · Program v2: full instruction set (rebuild)
+The user asked for a proper rebuild of what had been cut for time. Branch `program/v2`.
+
+- All nine instructions from `05-architecture.md`: `initialize`, `set_paused`, `create_series`, `set_split_rule`, `send_remittance`, `claim_interest`, `redeem`, `withdraw_proceeds`, `repay`.
+- Added back: `Config.paused`, `BondSeries.total_repaid`, `Position.interest_claimed`, `SplitRule.goal_amount` plus `goal_kind` (0 none, 1 land, 2 school fees, 3 house, 4 other).
+- A 0% transfer now creates no `Position`: the account is optional and must be passed only when something is saved (`PositionRequired`, `PositionNotNeeded`).
+- New program id `GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj` (account layouts changed). The old keypair is kept as `target/deploy/remitroot-v1-keypair.json`.
+- 34 tests in four files (`split`, `interest`, `issuer`, `access`) with a shared harness in `tests/common`. Every instruction has a happy path and at least one failure.
+
+Changes from `05-architecture.md`:
+- Pause blocks `set_split_rule`, `send_remittance` and `claim_interest`; `redeem` always works, so savers can exit after maturity.
+- A matured series refuses savings, but a 0% family-only transfer still goes through.
+- The family wallet must not be the default key or the worker.
+- `BondSeries.saver_count` counts workers who ever saved (it does not drop at redemption). `total_redeemed` is kept beside `total_repaid`.
+- `SplitRule.goal_kind` added so the app can label the goal.
+
+Security checklist: every account checked by seeds, `has_one` or token mint/authority/program; signers on every privileged action; checked arithmetic; `save_bps <= 5000`; tests cover spending another user's token account, a fake vault, and claiming or redeeming someone else's position.
+
+Next: scripts for v2, then the app rebuild on `app/v2`.
+
 ## App
 
 ### 2026-10-11 · Phase 5, reduced scope: core flow

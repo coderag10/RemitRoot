@@ -1,13 +1,19 @@
+pub mod claim_interest;
 pub mod create_series;
 pub mod initialize;
 pub mod redeem;
+pub mod repay;
 pub mod send_remittance;
+pub mod set_paused;
 pub mod set_split_rule;
 pub mod withdraw_proceeds;
 
+pub use claim_interest::*;
 pub use create_series::*;
 pub use initialize::*;
 pub use redeem::*;
+pub use repay::*;
 pub use send_remittance::*;
+pub use set_paused::*;
 pub use set_split_rule::*;
 pub use withdraw_proceeds::*;

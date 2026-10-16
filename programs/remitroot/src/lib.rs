@@ -11,7 +11,7 @@ pub use events::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT");
+declare_id!("GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj");
 
 #[program]
 pub mod remitroot {
@@ -19,6 +19,10 @@ pub mod remitroot {
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         crate::instructions::initialize::handle_initialize(ctx)
+    }
+
+    pub fn set_paused(ctx: Context<SetPaused>, paused: bool) -> Result<()> {
+        crate::instructions::set_paused::handle_set_paused(ctx, paused)
     }
 
     pub fn create_series(
@@ -41,12 +45,24 @@ pub mod remitroot {
         ctx: Context<SetSplitRule>,
         recipient: Pubkey,
         save_bps: u16,
+        goal_amount: u64,
+        goal_kind: u8,
     ) -> Result<()> {
-        crate::instructions::set_split_rule::handle_set_split_rule(ctx, recipient, save_bps)
+        crate::instructions::set_split_rule::handle_set_split_rule(
+            ctx,
+            recipient,
+            save_bps,
+            goal_amount,
+            goal_kind,
+        )
     }
 
     pub fn send_remittance(ctx: Context<SendRemittance>, amount: u64) -> Result<()> {
         crate::instructions::send_remittance::handle_send_remittance(ctx, amount)
+    }
+
+    pub fn claim_interest(ctx: Context<ClaimInterest>) -> Result<()> {
+        crate::instructions::claim_interest::handle_claim_interest(ctx)
     }
 
     pub fn redeem(ctx: Context<Redeem>) -> Result<()> {
@@ -59,5 +75,9 @@ pub mod remitroot {
         purpose: String,
     ) -> Result<()> {
         crate::instructions::withdraw_proceeds::handle_withdraw_proceeds(ctx, amount, purpose)
+    }
+
+    pub fn repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
+        crate::instructions::repay::handle_repay(ctx, amount)
     }
 }

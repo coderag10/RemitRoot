@@ -31,6 +31,7 @@ pub struct SendRemittance<'info> {
         has_one = vault,
     )]
     pub series: Box<Account<'info, BondSeries>>,
+    /// Only passed when something is saved. A 0% transfer creates no position.
     #[account(
         init_if_needed,
         payer = worker,
@@ -38,7 +39,7 @@ pub struct SendRemittance<'info> {
         seeds = [POSITION_SEED, worker.key().as_ref(), series.key().as_ref()],
         bump
     )]
-    pub position: Box<Account<'info, Position>>,
+    pub position: Option<Box<Account<'info, Position>>>,
     pub usd_mint: Box<InterfaceAccount<'info, Mint>>,
     #[account(
         mut,
@@ -55,45 +56,50 @@ pub struct SendRemittance<'info> {
         token::token_program = token_program,
     )]
     pub recipient_token: Box<InterfaceAccount<'info, TokenAccount>>,
-    #[account(mut)]
+    #[account(mut, token::token_program = token_program)]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 pub fn handle_send_remittance(ctx: Context<SendRemittance>, amount: u64) -> Result<()> {
+    require!(!ctx.accounts.config.paused, ErrorCode::Paused);
     require!(amount > 0, ErrorCode::ZeroAmount);
     let now = Clock::get()?.unix_timestamp;
-    let series = &mut ctx.accounts.series;
-    require!(now < series.maturity_ts, ErrorCode::SeriesMatured);
 
     let rule = &mut ctx.accounts.rule;
     // save rounds down; family gets the rest, so nothing is lost to rounding.
     let saved = u64::try_from(
-        (amount as u128)
-            .checked_mul(rule.save_bps as u128)
+        u128::from(amount)
+            .checked_mul(u128::from(rule.save_bps))
             .and_then(|v| v.checked_div(BPS_DENOMINATOR))
             .ok_or(ErrorCode::MathOverflow)?,
     )
     .map_err(|_| ErrorCode::MathOverflow)?;
     let family = amount.checked_sub(saved).ok_or(ErrorCode::MathOverflow)?;
 
-    let new_total = series
-        .total_principal
-        .checked_add(saved)
-        .ok_or(ErrorCode::MathOverflow)?;
-    require!(new_total <= series.cap, ErrorCode::CapExceeded);
-
-    let position = &mut ctx.accounts.position;
-    if position.worker == Pubkey::default() {
-        position.worker = ctx.accounts.worker.key();
-        position.series = series.key();
-        position.last_accrual_ts = now;
-        position.bump = ctx.bumps.position;
-    }
-    // Accrue on the old principal before it changes.
-    position.accrue(series.coupon_bps, series.maturity_ts, now)?;
+    let series = &mut ctx.accounts.series;
     if saved > 0 {
+        require!(now < series.maturity_ts, ErrorCode::SeriesMatured);
+        let new_total = series
+            .total_principal
+            .checked_add(saved)
+            .ok_or(ErrorCode::MathOverflow)?;
+        require!(new_total <= series.cap, ErrorCode::CapExceeded);
+
+        let position = ctx
+            .accounts
+            .position
+            .as_mut()
+            .ok_or(ErrorCode::PositionRequired)?;
+        if position.worker == Pubkey::default() {
+            position.worker = ctx.accounts.worker.key();
+            position.series = series.key();
+            position.last_accrual_ts = now;
+            position.bump = ctx.bumps.position.ok_or(ErrorCode::PositionRequired)?;
+        }
+        // Accrue on the old principal before it changes.
+        position.accrue(series.coupon_bps, series.maturity_ts, now)?;
         if position.principal == 0 {
             series.saver_count = series
                 .saver_count
@@ -105,6 +111,11 @@ pub fn handle_send_remittance(ctx: Context<SendRemittance>, amount: u64) -> Resu
             .checked_add(saved)
             .ok_or(ErrorCode::MathOverflow)?;
         series.total_principal = new_total;
+    } else {
+        require!(
+            ctx.accounts.position.is_none(),
+            ErrorCode::PositionNotNeeded
+        );
     }
 
     rule.total_sent = rule
@@ -155,11 +166,11 @@ pub fn handle_send_remittance(ctx: Context<SendRemittance>, amount: u64) -> Resu
 
     emit!(RemittanceSent {
         worker: ctx.accounts.worker.key(),
-        recipient: ctx.accounts.rule.recipient,
+        recipient: rule.recipient,
         amount,
         family_amount: family,
         saved_amount: saved,
-        series: ctx.accounts.series.key(),
+        series: series.key(),
     });
     Ok(())
 }

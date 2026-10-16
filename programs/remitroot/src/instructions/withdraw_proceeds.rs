@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{
-    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
-};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     constants::*,
@@ -44,7 +42,7 @@ pub struct WithdrawProceeds<'info> {
         token::token_program = token_program,
     )]
     pub issuer_token: Box<InterfaceAccount<'info, TokenAccount>>,
-    #[account(mut)]
+    #[account(mut, token::token_program = token_program)]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -57,7 +55,7 @@ pub fn handle_withdraw_proceeds(
 ) -> Result<()> {
     require!(amount > 0, ErrorCode::ZeroAmount);
     require!(
-        !purpose.is_empty() && purpose.len() <= MAX_PURPOSE_LEN,
+        !purpose.trim().is_empty() && purpose.len() <= PURPOSE_SPACE,
         ErrorCode::InvalidPurpose
     );
     require!(
@@ -80,19 +78,12 @@ pub fn handle_withdraw_proceeds(
     record.purpose = purpose.clone();
     record.ts = Clock::get()?.unix_timestamp;
 
-    let id_bytes = series.id.to_le_bytes();
-    let signer_seeds: &[&[&[u8]]] = &[&[SERIES_SEED, id_bytes.as_ref(), &[series.bump]]];
-    transfer_checked(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.key(),
-            TransferChecked {
-                from: ctx.accounts.vault.to_account_info(),
-                mint: ctx.accounts.usd_mint.to_account_info(),
-                to: ctx.accounts.issuer_token.to_account_info(),
-                authority: series.to_account_info(),
-            },
-            signer_seeds,
-        ),
+    series.transfer_out(
+        ctx.accounts.token_program.key(),
+        ctx.accounts.vault.to_account_info(),
+        ctx.accounts.usd_mint.to_account_info(),
+        ctx.accounts.issuer_token.to_account_info(),
+        series.to_account_info(),
         amount,
         ctx.accounts.usd_mint.decimals,
     )?;

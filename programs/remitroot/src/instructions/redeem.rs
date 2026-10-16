@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{
-    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
-};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     constants::*,
@@ -10,6 +8,7 @@ use crate::{
     state::{BondSeries, Config, Position},
 };
 
+/// Not blocked by the pause: savers can always take their money back after maturity.
 #[derive(Accounts)]
 pub struct Redeem<'info> {
     #[account(mut)]
@@ -40,7 +39,7 @@ pub struct Redeem<'info> {
         token::token_program = token_program,
     )]
     pub worker_token: Box<InterfaceAccount<'info, TokenAccount>>,
-    #[account(mut)]
+    #[account(mut, token::token_program = token_program)]
     pub vault: Box<InterfaceAccount<'info, TokenAccount>>,
     pub token_program: Interface<'info, TokenInterface>,
 }
@@ -70,21 +69,16 @@ pub fn handle_redeem(ctx: Context<Redeem>) -> Result<()> {
         .interest_paid
         .checked_add(interest)
         .ok_or(ErrorCode::MathOverflow)?;
+    position.principal = 0;
+    position.accrued_interest = 0;
 
     if payout > 0 {
-        let id_bytes = series.id.to_le_bytes();
-        let signer_seeds: &[&[&[u8]]] = &[&[SERIES_SEED, id_bytes.as_ref(), &[series.bump]]];
-        transfer_checked(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.key(),
-                TransferChecked {
-                    from: ctx.accounts.vault.to_account_info(),
-                    mint: ctx.accounts.usd_mint.to_account_info(),
-                    to: ctx.accounts.worker_token.to_account_info(),
-                    authority: series.to_account_info(),
-                },
-                signer_seeds,
-            ),
+        series.transfer_out(
+            ctx.accounts.token_program.key(),
+            ctx.accounts.vault.to_account_info(),
+            ctx.accounts.usd_mint.to_account_info(),
+            ctx.accounts.worker_token.to_account_info(),
+            series.to_account_info(),
             payout,
             ctx.accounts.usd_mint.decimals,
         )?;

@@ -4,13 +4,15 @@ use crate::{
     constants::*,
     error::ErrorCode,
     events::RuleSet,
-    state::{BondSeries, SplitRule},
+    state::{BondSeries, Config, SplitRule},
 };
 
 #[derive(Accounts)]
 pub struct SetSplitRule<'info> {
     #[account(mut)]
     pub worker: Signer<'info>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Account<'info, Config>,
     #[account(
         init_if_needed,
         payer = worker,
@@ -28,8 +30,19 @@ pub fn handle_set_split_rule(
     ctx: Context<SetSplitRule>,
     recipient: Pubkey,
     save_bps: u16,
+    goal_amount: u64,
+    goal_kind: u8,
 ) -> Result<()> {
+    require!(!ctx.accounts.config.paused, ErrorCode::Paused);
     require!(save_bps <= MAX_SAVE_BPS, ErrorCode::SaveShareTooHigh);
+    require!(
+        recipient != Pubkey::default() && recipient != ctx.accounts.worker.key(),
+        ErrorCode::InvalidRecipient
+    );
+    require!(
+        goal_kind <= MAX_GOAL_KIND && (goal_amount == 0) == (goal_kind == 0),
+        ErrorCode::InvalidGoal
+    );
 
     // Lifetime totals are left untouched on update; a fresh account starts them at zero.
     let rule = &mut ctx.accounts.rule;
@@ -37,6 +50,8 @@ pub fn handle_set_split_rule(
     rule.recipient = recipient;
     rule.save_bps = save_bps;
     rule.series = ctx.accounts.series.key();
+    rule.goal_amount = goal_amount;
+    rule.goal_kind = goal_kind;
     rule.bump = ctx.bumps.rule;
 
     emit!(RuleSet {
@@ -44,6 +59,8 @@ pub fn handle_set_split_rule(
         recipient,
         save_bps,
         series: rule.series,
+        goal_amount,
+        goal_kind,
     });
     Ok(())
 }

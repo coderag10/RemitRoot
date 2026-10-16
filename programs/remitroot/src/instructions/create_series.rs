@@ -53,7 +53,7 @@ pub fn handle_create_series(
     cap: u64,
 ) -> Result<()> {
     require!(
-        !name.is_empty() && name.len() <= MAX_NAME_LEN,
+        !name.trim().is_empty() && name.len() <= NAME_SPACE,
         ErrorCode::InvalidName
     );
     require!(coupon_bps <= MAX_COUPON_BPS, ErrorCode::CouponTooHigh);
@@ -77,6 +77,7 @@ pub fn handle_create_series(
     series.total_redeemed = 0;
     series.interest_paid = 0;
     series.total_withdrawn = 0;
+    series.total_repaid = 0;
     series.saver_count = 0;
     series.proceeds_count = 0;
     series.vault = ctx.accounts.vault.key();
