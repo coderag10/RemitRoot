@@ -136,6 +136,32 @@ Next: pitch script and technical demo script. Before submitting, open each sourc
 
 Next: user fills in team name on slide 8, confirms the source links, records and submits.
 
+### 2026-10-16 · App v2: full Phase 5 on program v2 (rebuild)
+Branch `app/v2` (on top of `program/v2`). Replaces the reduced app from 2026-10-11.
+
+- Pages: `/`, `/send`, `/history`, `/family`, `/bond`, `/bond/[id]`, `/issuer` (withdraw with purpose, repay, admin pause). Bottom tab bar on phones, header links on wider screens.
+- Nothing about the deployment is hard-coded: program id from the IDL; mint, token program and decimals from `Config`; series listed from chain, default is the newest open one. Faucet amounts are environment settings.
+- Savings goal (kind and amount, stored in the rule) with progress and a transfers-to-goal estimate; claim interest; redeem; live interest ticking each second.
+- History, family incoming transfers and bond activity are decoded from program events in recent transactions (no indexer).
+- English and Nepali: 256 keys each; Nepali digits, month names and relative times are produced in code because browser locale data for Nepali is uneven.
+- Data: TanStack Query with retries and back-off for public RPC rate limits; transaction status toasts with explorer links.
+- New dependencies (approved): `@tanstack/react-query`, `vitest` (with its `vite` peer), `@playwright/test`. Playwright moved out of the root `package.json`.
+- Tests: 27 unit tests (maths mirrors the program, formats, key and placeholder parity, error mapping, event decoding). Playwright in `app/e2e`: 8 tests passed against a local validator at 375px, including the full demo flow, refresh mid-flow, family view, 0% transfer, input problems, savings goal, the Nepali toggle and no sideways scrolling on any page. The redemption test needs a short series and has not been run yet.
+
+Nepali strings to check with a native speaker (my choices; please confirm or correct):
+- `tagline`: "हरेक पठाइ बाँडिन्छ। एक भाग जरा गाड्छ।" ("takes root" as जरा गाड्छ)
+- "बचतपत्र" for savings bond (the word in the official वैदेशिक रोजगार बचतपत्र), "कोष" for the vault, "जारीकर्ता" for issuer
+- "बाँडफाँड" for the split, "पठाइ" for one transfer, "परिपक्व" for matured
+- "फसेट" (faucet, transliterated), "अभ्यास वालेट" (practice wallet)
+- `landing.why.2`: the 2015 bond fact; please check it reads naturally and keeps the meaning exactly
+- `savings.claimNothing` uses "लिनलायक"
+
+Open problems:
+- The local validator, the app server and a browser together exhaust this 4 GB machine; browser tests now run against devnet instead.
+- Connected-wallet mode still untested in a real wallet extension.
+
+Next: deploy program v2 to devnet (needs about 1.4 more devnet SOL; airdrops were rate-limited), initialise with the existing test mint, seed, run the browser tests against devnet, update the README.
+
 ## Ideas (out of scope for now)
 
-- `claim_interest`, `repay`, `set_paused`, savings goal, early exit.
+- Early exit: list and buy a position before maturity (stretch).

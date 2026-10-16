@@ -86,6 +86,7 @@ export function SendForm({
   else if (saved > BigInt(0) && (chosenSeries === null || !isOpen(chosenSeries, now))) problem = "send.matured";
   else if (saved > BigInt(0) && chosenSeries && chosenSeries.totalPrincipal + saved > chosenSeries.cap) problem = "send.full";
   else if (goalOpen && goalAmount === null) problem = "send.goal.invalid";
+  else if (target === null) problem = "send.series.none";
 
   async function send() {
     if (problem || amount === null || recipient === null || target === null) return;
