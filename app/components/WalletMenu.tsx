@@ -64,10 +64,12 @@ export function WalletMenu() {
         aria-expanded={open}
         aria-label={t("wallet.menu")}
         onClick={() => setOpen((value) => !value)}
-        className="flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface pl-2.5 pr-3 text-label font-semibold hover:border-root"
+        className="flex min-h-[40px] min-w-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-label font-semibold hover:border-root"
       >
         <span className={`h-2.5 w-2.5 rounded-full ${session.mode === "demo" ? "bg-marigold" : "bg-leaf"}`} aria-hidden="true" />
-        <span className="tabular">{shortAddress(address)}</span>
+        {/* On the narrowest phones the address lives in the menu; the dot still shows which wallet. */}
+        <Icon name="wallet" size={16} className="min-[400px]:hidden" />
+        <span className="tabular hidden min-[400px]:inline">{shortAddress(address)}</span>
       </button>
       {open && (
         <div

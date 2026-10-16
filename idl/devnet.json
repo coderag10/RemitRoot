@@ -1,56 +1,21 @@
 {
-  "programId": "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT",
+  "programId": "GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj",
   "usdMint": "6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku",
-  "config": "BU1RxTScKPgbVg9JCwD6MU68RbWDb6UjmnJeyhyBu9Vq",
+  "config": "3ousykorW11yrKjFh5o5zv5v3ukWxCfqzskJAKgNLCwN",
   "series": [
     {
       "id": 0,
-      "address": "8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW",
-      "vault": "8TuAHwW5cnu95mnGyn3jEpytiLQwAyitKYbFtGftgcwA",
+      "address": "BXXw6N8Gc6xQMNA4yhh9EMUTsAWVcrynSpP8V2BjxQQm",
+      "vault": "3C2mF1aBxCJ2GD7smWAzRGakzo3PHeaF66Boh1aonSKq",
       "name": "Savings Bond 2026-A",
-      "maturityTs": 1794289982
+      "maturityTs": 1794729042
     },
     {
       "id": 1,
-      "address": "2ndXf3Z2d2DcdpvDg9Hb4vWkhTKGGSZvPTKHtwmQQtGs",
-      "vault": "B1PkEGLkZNnJasYtnk1EcQsAKH6T4hJkp6kdXV4Fr4mD",
+      "address": "2iiHLQvXYzM1wUGrXQ5cS4ST74jxEShooYU3sM9nTFZ5",
+      "vault": "GLMApeAmFUVn9HzpaocYvPzQMdz6VJzMr9kcN1iPcLyF",
       "name": "Savings Bond Demo",
-      "maturityTs": 1791699882
-    },
-    {
-      "id": 2,
-      "address": "H6LFm7sRCeSprvaWYc17acGWdZHHrbEa3cZynPsGfP1x",
-      "vault": "4L1EiRASrpCLPE3oci8TyUMvrovcFH3epUQXACarriNd",
-      "name": "Savings Bond Demo 2",
-      "maturityTs": 1791702729
-    },
-    {
-      "id": 3,
-      "address": "98D7HjuqmwVsqvRVHRYzYdNjWzQMyYAozfEKokxfiioe",
-      "vault": "28RHsBrtBHA965t1iTdb3ZAuaGoABPssa5HCCnM1sU4w",
-      "name": "Savings Bond Demo 3",
-      "maturityTs": 1791705858
-    },
-    {
-      "id": 4,
-      "address": "GEW3qDVX5dX4coALT8NW53x7D7vsmSWqidWfqgDatmhm",
-      "vault": "4rgkrYMSdbQJUDfUYbYQeovJCzXoVp74R4hY6FkAUAcw",
-      "name": "Savings Bond Demo 4",
-      "maturityTs": 1791706331
-    },
-    {
-      "id": 5,
-      "address": "Di1wdQjRtzKN6TgRSnbUj7FZJ4NJKVhBao7MZomj6Kyf",
-      "vault": "4L7Y7C34hSBN2huBpRsGU39gPpMCVDMvGGy3qAgsYPj2",
-      "name": "Savings Bond Demo 5",
-      "maturityTs": 1791706730
-    },
-    {
-      "id": 6,
-      "address": "5cgbs5TvCR4Q4LtqRysbSFLejGF8fufqh65AkCW8CiLC",
-      "vault": "81ESwXMG31YAMkB3T54AaE68vagVtEpdSHRHeAThJTGr",
-      "name": "Savings Bond Demo 6",
-      "maturityTs": 1791708734
+      "maturityTs": 1792137735
     }
   ]
 }

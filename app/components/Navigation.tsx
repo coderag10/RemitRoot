@@ -48,8 +48,8 @@ export function Header() {
   const { t } = useI18n();
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[960px] items-center justify-between gap-3 px-4">
-        <Link href="/" className="flex min-h-[48px] items-center gap-2" aria-label={`${t("brand.remit")}${t("brand.root")}`}>
+      <div className="mx-auto flex h-16 w-full max-w-[960px] items-center justify-between gap-2 px-4">
+        <Link href="/" className="flex min-h-[48px] min-w-0 items-center gap-1.5" aria-label={`${t("brand.remit")}${t("brand.root")}`}>
           <LogoMark />
           <Wordmark remit={t("brand.remit")} root={t("brand.root")} />
         </Link>
@@ -58,7 +58,7 @@ export function Header() {
             <ActiveHeaderLinks />
           </Suspense>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           <LanguageToggle />
           <WalletMenu />
         </div>
