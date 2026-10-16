@@ -1,7 +1,7 @@
 // One full run of the core flow with a fresh worker: fund, set rule, send, claim interest, redeem.
 //   yarn flow [--series <id>] [--amount 200] [--save-bps 1500] [--redeem true]
 import { getAccount } from "@solana/spl-token";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
 import {
   connect,
   explorerTx,
@@ -79,12 +79,12 @@ run(async () => {
   }
 
   if (flags["redeem"] !== "true") return;
-  const waitMs = series.maturityTs.toNumber() * 1000 - Date.now() + 5_000;
-  if (waitMs > 15 * 60_000) throw new Error("Series matures more than 15 minutes from now; not waiting.");
-  if (waitMs > 0) {
-    console.log(`3. Waiting ${Math.ceil(waitMs / 1000)}s for maturity...`);
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
-  }
+  // The program checks maturity against the chain clock, which can trail wall time on devnet.
+  const chainNow = async () => Number((await connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY))!.data.readBigInt64LE(32));
+  const maturity = series.maturityTs.toNumber();
+  if (maturity - (await chainNow()) > 15 * 60) throw new Error("Series matures more than 15 minutes from now; not waiting.");
+  console.log(`3. Waiting for maturity on the chain clock...`);
+  while ((await chainNow()) < maturity) await new Promise((resolve) => setTimeout(resolve, 5_000));
   const redeemSig = await program.methods.redeem().accountsPartial(accounts).signers([worker]).rpc();
   const back = (await getAccount(connection, sent.workerToken)).amount;
   console.log(`3. Redeemed: worker now holds ${formatUsd(back)}: ${explorerTx(redeemSig)}`);

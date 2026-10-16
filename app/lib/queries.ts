@@ -3,10 +3,11 @@
 // Chain reads as cached queries. Every page shares these, and they refresh after each
 // transaction and in the background, retrying when the public RPC limits requests.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { PublicKey } from "@solana/web3.js";
+import { SYSVAR_CLOCK_PUBKEY, type PublicKey } from "@solana/web3.js";
 import { useCallback, useSyncExternalStore } from "react";
 import { fetchActivity } from "./chain/history";
 import {
+  connection,
   fetchAllSeries,
   fetchConfig,
   fetchPositionsIn,
@@ -118,33 +119,55 @@ export function useRefreshChain() {
   return useCallback(() => client.invalidateQueries(), [client]);
 }
 
-// One shared clock for every component that shows live interest or maturity. It only runs in
-// the browser; during prerendering the time is 0 and nothing time-dependent has loaded yet.
+// One shared clock for every component that shows live interest or maturity. It runs at the
+// chain's time, not the device's: on devnet the chain clock can trail wall time by a minute or
+// more, and the program decides maturity by the chain clock. It only runs in the browser; during
+// prerendering the time is 0 and nothing time-dependent has loaded yet.
 const clockListeners = new Set<() => void>();
 let clockNow = 0;
+/** Chain time minus device time, in seconds, from the last read of the Clock sysvar. */
+let chainOffset = 0;
 let clockTimer: ReturnType<typeof setInterval> | null = null;
+let offsetTimer: ReturnType<typeof setInterval> | null = null;
+
+const deviceNow = () => Math.floor(Date.now() / 1000);
+
+async function syncChainClock() {
+  try {
+    const clock = await connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY);
+    // Clock sysvar layout: slot, epoch_start_timestamp, epoch, leader_schedule_epoch, unix_timestamp.
+    if (clock) chainOffset = Number(clock.data.readBigInt64LE(32)) - deviceNow();
+  } catch {
+    // Keep the last known offset; the device clock is a fair fallback.
+  }
+}
+
+function tick() {
+  clockNow = deviceNow() + chainOffset;
+  clockListeners.forEach((notify) => notify());
+}
 
 function subscribeClock(listener: () => void) {
   clockListeners.add(listener);
   if (!clockTimer) {
-    clockNow = Math.floor(Date.now() / 1000);
-    clockTimer = setInterval(() => {
-      clockNow = Math.floor(Date.now() / 1000);
-      clockListeners.forEach((notify) => notify());
-    }, 1000);
+    clockNow = deviceNow() + chainOffset;
+    clockTimer = setInterval(tick, 1000);
+    void syncChainClock().then(tick);
+    offsetTimer = setInterval(() => void syncChainClock(), 60_000);
   }
   return () => {
     clockListeners.delete(listener);
-    if (clockListeners.size === 0 && clockTimer) {
-      clearInterval(clockTimer);
-      clockTimer = null;
+    if (clockListeners.size === 0) {
+      if (clockTimer) clearInterval(clockTimer);
+      if (offsetTimer) clearInterval(offsetTimer);
+      clockTimer = offsetTimer = null;
     }
   };
 }
 
-const readClock = () => clockNow || Math.floor(Date.now() / 1000);
+const readClock = () => clockNow || deviceNow() + chainOffset;
 
-/** The current time in unix seconds, ticking every second in the browser. */
+/** The chain's current time in unix seconds, ticking every second in the browser. */
 export function useNow(): number {
   return useSyncExternalStore(subscribeClock, readClock, () => 0);
 }

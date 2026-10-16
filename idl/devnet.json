@@ -16,6 +16,20 @@
       "vault": "GLMApeAmFUVn9HzpaocYvPzQMdz6VJzMr9kcN1iPcLyF",
       "name": "Savings Bond Demo",
       "maturityTs": 1792137735
+    },
+    {
+      "id": 2,
+      "address": "6uQTVv6KWDa1cJnJ7D18fKad8MvEQYSb6D2DrkLP5k8z",
+      "vault": "FPBZFHXJzBvczNM9HA3x1rX3dFdWQdiqxseZJEpVXcqk",
+      "name": "E2E Short",
+      "maturityTs": 1792138079
+    },
+    {
+      "id": 3,
+      "address": "8BRxASHm8ziQwWkvj86ZCjozWfJZ1JNiYCAazxvBbqpV",
+      "vault": "GA5ypSkJ4MRXNNgoyduDFjEeJ7Dm5N5rmBgPSP2MyRGX",
+      "name": "E2E Short 2",
+      "maturityTs": 1792138488
     }
   ]
 }
