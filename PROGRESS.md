@@ -162,6 +162,15 @@ Open problems:
 
 Next: deploy program v2 to devnet (needs about 1.4 more devnet SOL; airdrops were rate-limited), initialise with the existing test mint, seed, run the browser tests against devnet, update the README.
 
+### 2026-10-16 · Program v2 on devnet; app v2 tested against it
+- Old program `4diHF…v2gT` closed with the user's approval to reclaim 1.84 SOL (devnet airdrops were rate-limited). The old live site stops working until `app/v2` is merged and Vercel redeploys.
+- v2 deployed as `GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj`, IDL uploaded on-chain. Config uses the existing test mint `6KXv…7Rku`, so the faucet wallet's stock still works. Series 0 "Savings Bond 2026-A" (30 days) seeded with six savers, two uses of funds and one repayment. Faucet wallet topped up by 0.5 SOL.
+- Browser tests against devnet at 375px: all 9 pass, including redemption (send into a 4-minute bond, refusal while the vault holds principal only, issuer `repay`, redeem).
+- Fixes found by those runs: the header overflowed narrow phones once a wallet was open; the app judged maturity by the device clock, but devnet's chain clock trails wall time, so Redeem was offered early. The app now runs its clock at chain time (Clock sysvar), and `yarn flow` waits on the chain clock.
+- Admin wallet: about 2.0 devnet SOL left.
+
+Next: user pushes `app/v2`, merges `program/v2` then `app/v2` into `main`, Vercel redeploys; then ten runs on the public URL (`BASE_URL=<url> yarn e2e`).
+
 ## Ideas (out of scope for now)
 
 - Early exit: list and buy a position before maturity (stretch).
