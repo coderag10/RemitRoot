@@ -29,17 +29,17 @@ RemitRoot does not claim to make transfers cheaper. It changes what a transfer d
 
 ## How it works
 
-1. **Set the split.** The worker picks the family's wallet and a savings share from 0% to 50%.
+1. **Set the split.** The worker picks the family's wallet, a savings share from 0% to 50%, and optionally a savings goal (land, school fees, a house).
 2. **Send.** One transaction pays the family and moves the savings share into the bond's vault. The worker's bond position grows by that amount.
-3. **Watch it grow.** The worker sees total saved, interest so far and the maturity date. Anyone can open the public bond page and see how much was raised, how many savers there are, what the vault holds against what is owed, and each use of funds the issuer has recorded.
-4. **Redeem.** After maturity the worker takes back the savings plus simple interest.
+3. **Watch it grow.** The worker sees total saved, interest building every second, goal progress and the maturity date, and can claim interest along the way. The family sees what it received and the savings being built for it. Anyone can open the public bond page: how much was raised, how many savers there are, what the vault holds against what is owed, and every use of funds and repayment the issuer recorded.
+4. **Redeem.** After maturity the worker takes back the savings plus any unpaid simple interest. The issuer repays the vault first; until then a redemption is refused with a plain explanation.
 
 On devnet, $200 sent at a 15% share looks like this:
 
 | Step | Result | Transaction |
 |---|---|---|
-| Send $200 | $170 to the family, $30 into the bond, in one transaction | [explorer](https://explorer.solana.com/tx/2ZDmjsCmynFfhWinmKJnFLhWLiuCgK1wzDwBbzpkHME3bL1CbLWJ6znLqyKBbFC1zHgTueeVe4b8kSdNTHgTNTcg?cluster=devnet) |
-| Redeem after maturity | Savings returned to the worker | [explorer](https://explorer.solana.com/tx/5KCoQVoHHo5jgKV8EFuQmQqcuYz22nSXst3aK5wNREsVWRQpAtFYNWQmBVgmRSkN1VfKKDjrU3aSBoNkUmBqZia5?cluster=devnet) |
+| Send $200 | $170 to the family, $30 into the bond, in one transaction | [explorer](https://explorer.solana.com/tx/2gFpu5UsvbZ7S4tHKyYUEDmcdzJVu7ypNqupRLD2EEgz9hjGFVtwDNYw5zGkQrKk3bagzTifbT54dfVogULHvUu7?cluster=devnet) |
+| Redeem after maturity | Savings plus interest returned to the worker | [explorer](https://explorer.solana.com/tx/8e91ntT5sbQRZriWGmrFgrTw1YudfExzKKYMhKBsKhhhCaWfXZ5YhPx4AEAufhS2GYgd7ypy9hiJytkPHcxJ8Tu?cluster=devnet) |
 
 ### Why Solana
 
@@ -51,8 +51,8 @@ On devnet, $200 sent at a 15% share looks like this:
 
 ```mermaid
 flowchart LR
-    W[Worker's browser] --> A[Next.js app]
-    A -->|reads accounts, sends transactions| P[remitroot program on Solana devnet]
+    W[Worker, family or public browser] --> A[Next.js app]
+    A -->|reads accounts and events, sends transactions| P[remitroot program on Solana devnet]
     A -->|practice wallet top-up| F[Faucet route]
     F -->|test dollars and SOL| W
     P --> C[Config]
@@ -62,52 +62,59 @@ flowchart LR
     P --> U[ProceedsRecord, one per withdrawal]
 ```
 
-There is no database. The chain is the only source of truth, and the app reads accounts directly. The one server-side piece is the faucet route, which hands a new visitor test dollars and a little devnet SOL.
+There is no database and nothing about the deployment is hard-coded in the app. The program id comes from the IDL; the dollar mint, its token program and every bond series are read from the program's accounts; history comes from the program's events. The one server-side piece is the faucet route, which gives a demo visitor test dollars and a little devnet SOL.
 
 ### Accounts
 
 | Account | Seeds | Holds |
 |---|---|---|
-| `Config` | `"config"` | Admin, the test-dollar mint, series count |
-| `BondSeries` | `"series", id` | Issuer, name, rate, maturity, cap, totals, saver count |
+| `Config` | `"config"` | Admin, the dollar mint, pause switch, series count |
+| `BondSeries` | `"series", id` | Issuer, name, rate, start and maturity, cap, totals sold, redeemed, withdrawn and repaid, interest paid, saver count |
 | Vault | `"vault", series` | The series' test dollars, owned by the series |
-| `SplitRule` | `"rule", worker` | Recipient, savings share, lifetime totals |
-| `Position` | `"position", worker, series` | Principal, accrued interest, last accrual time |
+| `SplitRule` | `"rule", worker` | Family wallet, savings share, series, lifetime totals, savings goal |
+| `Position` | `"position", worker, series` | Principal, interest booked and claimed, last accrual time |
 | `ProceedsRecord` | `"proceeds", series, index` | Amount, stated purpose, time |
 
 ### Instructions
 
 | Instruction | Signer | What it does |
 |---|---|---|
-| `initialize` | admin | Creates the config and fixes the test-dollar mint |
-| `create_series` | admin | Creates a bond series and its vault |
-| `set_split_rule` | worker | Sets the recipient and the savings share |
+| `initialize` | admin | Creates the config and fixes the dollar mint |
+| `set_paused` | admin | Emergency stop for setting rules, sending and claiming |
+| `create_series` | admin | Creates a bond series, its issuer and its vault |
+| `set_split_rule` | worker | Sets the family wallet, the savings share and an optional goal |
 | `send_remittance` | worker | Splits the transfer between the family and the bond vault |
-| `redeem` | worker | After maturity, pays principal plus simple interest |
+| `claim_interest` | worker | Pays the interest earned so far |
+| `redeem` | worker | After maturity, pays principal plus unpaid interest and closes the position |
 | `withdraw_proceeds` | issuer | Takes funds from the vault with a public, stated purpose |
+| `repay` | issuer | Pays funds back into the vault |
 
 ### Rules the program enforces
 
 - **Split:** `saved = amount × share / 10,000`, rounded down; `family = amount − saved`. Nothing is lost to rounding.
-- **Share limit:** the savings share cannot exceed 50%.
-- **Interest:** simple, not compound. It is booked before any change to the principal and stops at maturity.
-- **Caps and maturity:** a transfer fails if it would exceed the series cap or the series has matured.
-- **Solvency:** a redemption fails with a clear error if the vault cannot cover it. The public page shows the vault balance against what is owed.
-- **Access:** only the admin creates series, only the issuer withdraws, and no instruction lets one user move another user's funds.
+- **Share limit:** the savings share cannot exceed 50%. The family wallet must be a real address other than the worker's.
+- **Interest:** simple, not compound, rounded in the vault's favour. It is booked before any change to the principal and stops at maturity.
+- **Caps and maturity:** saving fails if it would exceed the series cap or the series has matured. A 0% family-only transfer still works, and creates no bond position.
+- **Solvency:** claims and redemptions fail with a clear error if the vault cannot cover them; the issuer must repay first. The public page shows the vault against what is owed.
+- **Pause:** the admin can stop new rules, sends and claims. Redeeming after maturity always works.
+- **Access:** only the admin creates series and pauses, only the issuer withdraws and repays, and no instruction lets one user move another user's funds.
 
-All arithmetic is checked. Token accounts are verified against the expected mint and owner.
+All arithmetic is checked. Every account is checked by seeds, owner or token mint and authority. Events are emitted for every change the app shows.
 
 ## Run it
 
 Needs Rust, the Solana CLI, Anchor 1.1.x, Node and yarn.
 
 ```bash
-# Program: build and run the 11 tests (Rust, LiteSVM)
+# Program: build and run the 34 tests (Rust, LiteSVM)
 anchor build
 anchor test
 
 # Web app
-cd app && yarn install && yarn dev    # http://localhost:3000
+cd app && yarn install
+yarn dev        # http://localhost:3000
+yarn test       # 27 unit tests
+yarn e2e        # browser tests against a running app, at phone size
 ```
 
 The app talks to devnet out of the box. Demo mode needs a faucet key; setup and environment variables are in [`app/README.md`](app/README.md).
@@ -116,46 +123,47 @@ The app talks to devnet out of the box. Demo mode needs a faucet key; setup and 
 
 ```bash
 yarn install
-yarn setup:devnet                       # test dollar, config and a 30-day bond series
-yarn setup:devnet --maturity-minutes 5  # add a short series for a live redemption
-yarn seed                               # sample savers and use-of-funds records
-yarn faucet <address> --usd 1000 --sol 0.05
-yarn flow --redeem true                 # one full run with explorer links
-yarn pay-interest --series 3 --usd 1    # issuer pays interest into a vault so savers can redeem
+yarn setup:devnet [--mint <address>]                   # config (first run) and a 30-day bond series
+yarn setup:devnet --maturity-minutes 5 --name "Demo"   # add a short series for a live redemption
+yarn seed                                              # sample savers, uses of funds and a repayment
+yarn faucet <address> --usd 1000 --sol 0.05            # test dollars and SOL for an address
+yarn flow --redeem true                                # one full run with explorer links
+yarn issuer withdraw --series 0 --usd 100 --purpose "Hydropower project, tranche 1"
+yarn issuer repay --series 0 --usd 25
+yarn admin pause | unpause | status
 ```
 
-Addresses are written to `idl/devnet.json`. The scripts refuse to run against mainnet.
+The scripts read config and series from chain, record what they create in `idl/devnet.json`, and refuse to run against mainnet.
 
 ### Repo layout
 
 ```
 programs/remitroot/        Anchor program (Rust), one instruction per file
-programs/remitroot/tests/  Program tests (Rust, LiteSVM)
-idl/                       IDL, TypeScript types and devnet addresses
-app/                       Web app (Next.js): landing, send, public bond page
-scripts/                   Devnet setup, faucet, seed data, full-flow run
+programs/remitroot/tests/  Program tests (Rust, LiteSVM): split, interest, issuer, access
+idl/                       IDL, TypeScript types and a record of devnet addresses
+app/                       Web app (Next.js): worker, family, public bond and issuer pages
+app/e2e/                   Browser tests (Playwright)
+scripts/                   Devnet setup, faucet, seed data, issuer and admin actions, full-flow run
 ```
 
 ## Devnet addresses
 
 | What | Address |
 |---|---|
-| Program | [`4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT`](https://explorer.solana.com/address/4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT?cluster=devnet) |
+| Program | [`GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj`](https://explorer.solana.com/address/GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj?cluster=devnet) |
 | Test dollar mint (6 decimals, no value) | [`6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku`](https://explorer.solana.com/address/6KXvkDwG51KtsvMGLhWp1R5EYjx3BemGrhqQ1ZuF7Rku?cluster=devnet) |
-| Config | [`BU1RxTScKPgbVg9JCwD6MU68RbWDb6UjmnJeyhyBu9Vq`](https://explorer.solana.com/address/BU1RxTScKPgbVg9JCwD6MU68RbWDb6UjmnJeyhyBu9Vq?cluster=devnet) |
-| Bond series 0, "Savings Bond 2026-A" | [`8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW`](https://explorer.solana.com/address/8smsSjTmYWExnjajvKj4xtxmNVe7UNYZaedbZeFC3LGW?cluster=devnet) |
-| Series 0 vault | [`8TuAHwW5cnu95mnGyn3jEpytiLQwAyitKYbFtGftgcwA`](https://explorer.solana.com/address/8TuAHwW5cnu95mnGyn3jEpytiLQwAyitKYbFtGftgcwA?cluster=devnet) |
+| Config | [`3ousykorW11yrKjFh5o5zv5v3ukWxCfqzskJAKgNLCwN`](https://explorer.solana.com/address/3ousykorW11yrKjFh5o5zv5v3ukWxCfqzskJAKgNLCwN?cluster=devnet) |
+| Bond series 0, "Savings Bond 2026-A" | [`BXXw6N8Gc6xQMNA4yhh9EMUTsAWVcrynSpP8V2BjxQQm`](https://explorer.solana.com/address/BXXw6N8Gc6xQMNA4yhh9EMUTsAWVcrynSpP8V2BjxQQm?cluster=devnet) |
+| Series 0 vault | [`3C2mF1aBxCJ2GD7smWAzRGakzo3PHeaF66Boh1aonSKq`](https://explorer.solana.com/address/3C2mF1aBxCJ2GD7smWAzRGakzo3PHeaF66Boh1aonSKq?cluster=devnet) |
 
 The full list, including the short series used for redemption tests, is in [`idl/devnet.json`](idl/devnet.json).
 
 ## What the prototype does not do
 
-- **No interest claim before maturity.** Interest is paid with the principal at redemption.
-- **No repay instruction.** The issuer funds interest with a plain token transfer into the vault. Until that happens, a redemption is refused.
-- **Issuer actions run from scripts.** There is no issuer page, and the family's view is a card on the send page.
-- **English only.** All text goes through one translation file, but the Nepali version is not written.
 - **No early exit.** A position cannot be sold before maturity.
+- **No indexer.** History is read from recent transactions, so very old activity may not be listed.
 - **Rupee depreciation is not solved.** The test bond is in test dollars. What currency a real bond uses is a decision for its issuer.
+- **The Nepali text needs a native speaker's review** before it is shown to real users.
 
 ## How a real version would work
 
