@@ -1,5 +1,11 @@
-{
-  "address": "4diHFDJAtmQXPvi7ePbozYJ7De76ChL3cGiBqWwcv2gT",
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/remitroot.json`.
+ */
+export type Remitroot = {
+  "address": "GHmZ7YCiQNHJQZHTGZfK3oJBfjRWFspKU47HcWaGTiKj",
   "metadata": {
     "name": "remitroot",
     "version": "0.1.0",
@@ -8,7 +14,124 @@
   },
   "instructions": [
     {
-      "name": "create_series",
+      "name": "claimInterest",
+      "discriminator": [
+        62,
+        142,
+        132,
+        209,
+        206,
+        8,
+        79,
+        175
+      ],
+      "accounts": [
+        {
+          "name": "worker",
+          "signer": true,
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "series",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  105,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "series.id",
+                "account": "bondSeries"
+              }
+            ]
+          },
+          "relations": [
+            "position"
+          ]
+        },
+        {
+          "name": "position",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "worker"
+              },
+              {
+                "kind": "account",
+                "path": "series"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdMint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "workerToken",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "series"
+          ]
+        },
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "createSeries",
       "discriminator": [
         181,
         9,
@@ -68,8 +191,8 @@
               },
               {
                 "kind": "account",
-                "path": "config.series_count",
-                "account": "Config"
+                "path": "config.seriesCount",
+                "account": "config"
               }
             ]
           }
@@ -97,16 +220,16 @@
           }
         },
         {
-          "name": "usd_mint",
+          "name": "usdMint",
           "relations": [
             "config"
           ]
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -116,11 +239,11 @@
           "type": "string"
         },
         {
-          "name": "coupon_bps",
+          "name": "couponBps",
           "type": "u16"
         },
         {
-          "name": "maturity_ts",
+          "name": "maturityTs",
           "type": "i64"
         },
         {
@@ -167,10 +290,13 @@
           }
         },
         {
-          "name": "usd_mint"
+          "name": "usdMint",
+          "docs": [
+            "Any SPL or Token-2022 mint: the test dollar on devnet, USDC in a local simulation."
+          ]
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -234,7 +360,7 @@
               {
                 "kind": "account",
                 "path": "series.id",
-                "account": "BondSeries"
+                "account": "bondSeries"
               }
             ]
           },
@@ -272,13 +398,13 @@
           }
         },
         {
-          "name": "usd_mint",
+          "name": "usdMint",
           "relations": [
             "config"
           ]
         },
         {
-          "name": "worker_token",
+          "name": "workerToken",
           "writable": true
         },
         {
@@ -289,13 +415,103 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         }
       ],
       "args": []
     },
     {
-      "name": "send_remittance",
+      "name": "repay",
+      "discriminator": [
+        234,
+        103,
+        67,
+        82,
+        208,
+        234,
+        219,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "issuer",
+          "signer": true,
+          "relations": [
+            "series"
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "series",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  114,
+                  105,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "series.id",
+                "account": "bondSeries"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdMint",
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "issuerToken",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "series"
+          ]
+        },
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "sendRemittance",
       "discriminator": [
         58,
         184,
@@ -373,7 +589,7 @@
               {
                 "kind": "account",
                 "path": "series.id",
-                "account": "BondSeries"
+                "account": "bondSeries"
               }
             ]
           },
@@ -383,7 +599,11 @@
         },
         {
           "name": "position",
+          "docs": [
+            "Only passed when something is saved. A 0% transfer creates no position."
+          ],
           "writable": true,
+          "optional": true,
           "pda": {
             "seeds": [
               {
@@ -411,17 +631,17 @@
           }
         },
         {
-          "name": "usd_mint",
+          "name": "usdMint",
           "relations": [
             "config"
           ]
         },
         {
-          "name": "worker_token",
+          "name": "workerToken",
           "writable": true
         },
         {
-          "name": "recipient_token",
+          "name": "recipientToken",
           "docs": [
             "Must be a token account owned by the recipient named in the rule."
           ],
@@ -435,10 +655,10 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -450,7 +670,54 @@
       ]
     },
     {
-      "name": "set_split_rule",
+      "name": "setPaused",
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "setSplitRule",
       "discriminator": [
         66,
         220,
@@ -466,6 +733,24 @@
           "name": "worker",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "rule",
@@ -506,13 +791,13 @@
               {
                 "kind": "account",
                 "path": "series.id",
-                "account": "BondSeries"
+                "account": "bondSeries"
               }
             ]
           }
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -522,13 +807,21 @@
           "type": "pubkey"
         },
         {
-          "name": "save_bps",
+          "name": "saveBps",
           "type": "u16"
+        },
+        {
+          "name": "goalAmount",
+          "type": "u64"
+        },
+        {
+          "name": "goalKind",
+          "type": "u8"
         }
       ]
     },
     {
-      "name": "withdraw_proceeds",
+      "name": "withdrawProceeds",
       "discriminator": [
         124,
         68,
@@ -585,7 +878,7 @@
               {
                 "kind": "account",
                 "path": "series.id",
-                "account": "BondSeries"
+                "account": "bondSeries"
               }
             ]
           }
@@ -614,20 +907,20 @@
               },
               {
                 "kind": "account",
-                "path": "series.proceeds_count",
-                "account": "BondSeries"
+                "path": "series.proceedsCount",
+                "account": "bondSeries"
               }
             ]
           }
         },
         {
-          "name": "usd_mint",
+          "name": "usdMint",
           "relations": [
             "config"
           ]
         },
         {
-          "name": "issuer_token",
+          "name": "issuerToken",
           "writable": true
         },
         {
@@ -638,10 +931,10 @@
           ]
         },
         {
-          "name": "token_program"
+          "name": "tokenProgram"
         },
         {
-          "name": "system_program",
+          "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
       ],
@@ -659,7 +952,7 @@
   ],
   "accounts": [
     {
-      "name": "BondSeries",
+      "name": "bondSeries",
       "discriminator": [
         212,
         151,
@@ -672,7 +965,7 @@
       ]
     },
     {
-      "name": "Config",
+      "name": "config",
       "discriminator": [
         155,
         12,
@@ -685,7 +978,7 @@
       ]
     },
     {
-      "name": "Position",
+      "name": "position",
       "discriminator": [
         170,
         188,
@@ -698,7 +991,7 @@
       ]
     },
     {
-      "name": "ProceedsRecord",
+      "name": "proceedsRecord",
       "discriminator": [
         221,
         45,
@@ -711,7 +1004,7 @@
       ]
     },
     {
-      "name": "SplitRule",
+      "name": "splitRule",
       "discriminator": [
         74,
         248,
@@ -726,7 +1019,46 @@
   ],
   "events": [
     {
-      "name": "ProceedsWithdrawn",
+      "name": "configInitialized",
+      "discriminator": [
+        181,
+        49,
+        200,
+        156,
+        19,
+        167,
+        178,
+        91
+      ]
+    },
+    {
+      "name": "interestClaimed",
+      "discriminator": [
+        207,
+        228,
+        188,
+        90,
+        131,
+        122,
+        6,
+        125
+      ]
+    },
+    {
+      "name": "pauseSet",
+      "discriminator": [
+        175,
+        57,
+        198,
+        136,
+        192,
+        66,
+        204,
+        73
+      ]
+    },
+    {
+      "name": "proceedsWithdrawn",
       "discriminator": [
         39,
         167,
@@ -739,7 +1071,7 @@
       ]
     },
     {
-      "name": "Redeemed",
+      "name": "redeemed",
       "discriminator": [
         14,
         29,
@@ -752,7 +1084,7 @@
       ]
     },
     {
-      "name": "RemittanceSent",
+      "name": "remittanceSent",
       "discriminator": [
         83,
         67,
@@ -765,7 +1097,20 @@
       ]
     },
     {
-      "name": "RuleSet",
+      "name": "repaid",
+      "discriminator": [
+        38,
+        248,
+        231,
+        7,
+        150,
+        164,
+        172,
+        23
+      ]
+    },
+    {
+      "name": "ruleSet",
       "discriminator": [
         141,
         22,
@@ -778,7 +1123,7 @@
       ]
     },
     {
-      "name": "SeriesCreated",
+      "name": "seriesCreated",
       "discriminator": [
         2,
         164,
@@ -794,78 +1139,108 @@
   "errors": [
     {
       "code": 6000,
-      "name": "NotAdmin",
+      "name": "notAdmin",
       "msg": "Only the admin can do this"
     },
     {
       "code": 6001,
-      "name": "NotIssuer",
+      "name": "notIssuer",
       "msg": "Only the bond issuer can do this"
     },
     {
       "code": 6002,
-      "name": "SaveShareTooHigh",
-      "msg": "Savings share cannot be more than 50%"
+      "name": "paused",
+      "msg": "RemitRoot is paused by the admin; try again later"
     },
     {
       "code": 6003,
-      "name": "CouponTooHigh",
-      "msg": "Coupon rate is too high"
+      "name": "saveShareTooHigh",
+      "msg": "Savings share cannot be more than 50%"
     },
     {
       "code": 6004,
-      "name": "InvalidName",
-      "msg": "Name is empty or too long"
+      "name": "invalidRecipient",
+      "msg": "The family wallet address is not valid"
     },
     {
       "code": 6005,
-      "name": "InvalidPurpose",
-      "msg": "Purpose is empty or too long"
+      "name": "invalidGoal",
+      "msg": "The savings goal is not valid"
     },
     {
       "code": 6006,
-      "name": "InvalidMaturity",
-      "msg": "Maturity must be in the future"
+      "name": "couponTooHigh",
+      "msg": "Coupon rate is too high"
     },
     {
       "code": 6007,
-      "name": "ZeroAmount",
-      "msg": "Amount must be greater than zero"
+      "name": "invalidName",
+      "msg": "Name is empty or too long"
     },
     {
       "code": 6008,
-      "name": "SeriesMatured",
-      "msg": "This bond series has matured and takes no new savings"
+      "name": "invalidPurpose",
+      "msg": "Purpose is empty or too long"
     },
     {
       "code": 6009,
-      "name": "NotMatured",
-      "msg": "This bond series has not matured yet"
+      "name": "invalidMaturity",
+      "msg": "Maturity must be in the future"
     },
     {
       "code": 6010,
-      "name": "CapExceeded",
-      "msg": "This transfer would exceed the bond series cap"
+      "name": "zeroAmount",
+      "msg": "Amount must be greater than zero"
     },
     {
       "code": 6011,
-      "name": "WrongSeries",
-      "msg": "The split rule points to a different bond series"
+      "name": "seriesMatured",
+      "msg": "This bond series has matured and takes no new savings"
     },
     {
       "code": 6012,
-      "name": "VaultInsufficient",
-      "msg": "The vault does not hold enough funds; the issuer must repay first"
+      "name": "notMatured",
+      "msg": "This bond series has not matured yet"
     },
     {
       "code": 6013,
-      "name": "MathOverflow",
+      "name": "capExceeded",
+      "msg": "This transfer would exceed the bond series cap"
+    },
+    {
+      "code": 6014,
+      "name": "wrongSeries",
+      "msg": "The split rule points to a different bond series"
+    },
+    {
+      "code": 6015,
+      "name": "positionRequired",
+      "msg": "A savings share needs the bond position account"
+    },
+    {
+      "code": 6016,
+      "name": "positionNotNeeded",
+      "msg": "A transfer with nothing saved must not pass a bond position"
+    },
+    {
+      "code": 6017,
+      "name": "nothingToClaim",
+      "msg": "There is no interest to claim yet"
+    },
+    {
+      "code": 6018,
+      "name": "vaultInsufficient",
+      "msg": "The vault does not hold enough funds; the issuer must repay first"
+    },
+    {
+      "code": 6019,
+      "name": "mathOverflow",
       "msg": "Arithmetic overflow"
     }
   ],
   "types": [
     {
-      "name": "BondSeries",
+      "name": "bondSeries",
       "type": {
         "kind": "struct",
         "fields": [
@@ -875,6 +1250,9 @@
           },
           {
             "name": "issuer",
+            "docs": [
+              "Can withdraw proceeds and repay."
+            ],
             "type": "pubkey"
           },
           {
@@ -882,18 +1260,18 @@
             "type": "string"
           },
           {
-            "name": "coupon_bps",
+            "name": "couponBps",
             "docs": [
               "Annual simple interest in basis points, e.g. 900 = 9%."
             ],
             "type": "u16"
           },
           {
-            "name": "start_ts",
+            "name": "startTs",
             "type": "i64"
           },
           {
-            "name": "maturity_ts",
+            "name": "maturityTs",
             "type": "i64"
           },
           {
@@ -904,36 +1282,49 @@
             "type": "u64"
           },
           {
-            "name": "total_principal",
+            "name": "totalPrincipal",
             "docs": [
               "Principal sold so far (lifetime, never decreases)."
             ],
             "type": "u64"
           },
           {
-            "name": "total_redeemed",
+            "name": "totalRedeemed",
             "docs": [
               "Principal paid back to savers at redemption."
             ],
             "type": "u64"
           },
           {
-            "name": "interest_paid",
+            "name": "interestPaid",
+            "docs": [
+              "Interest paid to savers, by claim or at redemption."
+            ],
             "type": "u64"
           },
           {
-            "name": "total_withdrawn",
+            "name": "totalWithdrawn",
             "docs": [
               "Taken out of the vault by the issuer."
             ],
             "type": "u64"
           },
           {
-            "name": "saver_count",
+            "name": "totalRepaid",
+            "docs": [
+              "Paid back into the vault by the issuer."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "saverCount",
+            "docs": [
+              "Workers who have ever saved into this series."
+            ],
             "type": "u32"
           },
           {
-            "name": "proceeds_count",
+            "name": "proceedsCount",
             "type": "u32"
           },
           {
@@ -948,20 +1339,36 @@
       }
     },
     {
-      "name": "Config",
+      "name": "config",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "admin",
+            "docs": [
+              "Creates series and can pause."
+            ],
             "type": "pubkey"
           },
           {
-            "name": "usd_mint",
+            "name": "usdMint",
+            "docs": [
+              "The dollar mint every series uses: the test mint on devnet, USDC in a local simulation."
+            ],
             "type": "pubkey"
           },
           {
-            "name": "series_count",
+            "name": "paused",
+            "docs": [
+              "Emergency stop for setting rules, sending and claiming interest. Redeeming always works."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "seriesCount",
+            "docs": [
+              "Id of the next series."
+            ],
             "type": "u64"
           },
           {
@@ -972,7 +1379,55 @@
       }
     },
     {
-      "name": "Position",
+      "name": "configInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdMint",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "interestClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "worker",
+            "type": "pubkey"
+          },
+          {
+            "name": "series",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "pauseSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "position",
       "type": {
         "kind": "struct",
         "fields": [
@@ -989,15 +1444,22 @@
             "type": "u64"
           },
           {
-            "name": "accrued_interest",
+            "name": "accruedInterest",
             "docs": [
-              "Interest booked up to `last_accrual_ts`."
+              "Interest booked up to `last_accrual_ts` and not yet paid."
             ],
             "type": "u64"
           },
           {
-            "name": "last_accrual_ts",
+            "name": "lastAccrualTs",
             "type": "i64"
+          },
+          {
+            "name": "interestClaimed",
+            "docs": [
+              "Interest already paid out by `claim_interest`."
+            ],
+            "type": "u64"
           },
           {
             "name": "bump",
@@ -1007,7 +1469,7 @@
       }
     },
     {
-      "name": "ProceedsRecord",
+      "name": "proceedsRecord",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1035,7 +1497,7 @@
       }
     },
     {
-      "name": "ProceedsWithdrawn",
+      "name": "proceedsWithdrawn",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1059,7 +1521,7 @@
       }
     },
     {
-      "name": "Redeemed",
+      "name": "redeemed",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1083,7 +1545,7 @@
       }
     },
     {
-      "name": "RemittanceSent",
+      "name": "remittanceSent",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1100,11 +1562,11 @@
             "type": "u64"
           },
           {
-            "name": "family_amount",
+            "name": "familyAmount",
             "type": "u64"
           },
           {
-            "name": "saved_amount",
+            "name": "savedAmount",
             "type": "u64"
           },
           {
@@ -1115,7 +1577,27 @@
       }
     },
     {
-      "name": "RuleSet",
+      "name": "repaid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "series",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "totalRepaid",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ruleSet",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1128,18 +1610,26 @@
             "type": "pubkey"
           },
           {
-            "name": "save_bps",
+            "name": "saveBps",
             "type": "u16"
           },
           {
             "name": "series",
             "type": "pubkey"
+          },
+          {
+            "name": "goalAmount",
+            "type": "u64"
+          },
+          {
+            "name": "goalKind",
+            "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "SeriesCreated",
+      "name": "seriesCreated",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1156,11 +1646,11 @@
             "type": "pubkey"
           },
           {
-            "name": "coupon_bps",
+            "name": "couponBps",
             "type": "u16"
           },
           {
-            "name": "maturity_ts",
+            "name": "maturityTs",
             "type": "i64"
           },
           {
@@ -1171,7 +1661,7 @@
       }
     },
     {
-      "name": "SplitRule",
+      "name": "splitRule",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1181,27 +1671,50 @@
           },
           {
             "name": "recipient",
+            "docs": [
+              "The family wallet."
+            ],
             "type": "pubkey"
           },
           {
-            "name": "save_bps",
+            "name": "saveBps",
+            "docs": [
+              "Savings share, 0 to 5000 basis points."
+            ],
             "type": "u16"
           },
           {
             "name": "series",
+            "docs": [
+              "Where savings go."
+            ],
             "type": "pubkey"
           },
           {
-            "name": "total_sent",
+            "name": "totalSent",
             "type": "u64"
           },
           {
-            "name": "total_saved",
+            "name": "totalSaved",
             "type": "u64"
           },
           {
-            "name": "transfer_count",
+            "name": "transferCount",
             "type": "u32"
+          },
+          {
+            "name": "goalAmount",
+            "docs": [
+              "Optional savings goal in base units; 0 means no goal."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "goalKind",
+            "docs": [
+              "What the goal is for; see `MAX_GOAL_KIND`."
+            ],
+            "type": "u8"
           },
           {
             "name": "bump",
@@ -1213,44 +1726,68 @@
   ],
   "constants": [
     {
-      "name": "CONFIG_SEED",
+      "name": "configSeed",
       "type": "bytes",
       "value": "[99, 111, 110, 102, 105, 103]"
     },
     {
-      "name": "MAX_COUPON_BPS",
+      "name": "maxCouponBps",
+      "docs": [
+        "Highest annual coupon a series may carry: 100%."
+      ],
       "type": "u16",
       "value": "10000"
     },
     {
-      "name": "MAX_SAVE_BPS",
+      "name": "maxGoalKind",
+      "docs": [
+        "Savings goal kinds: 0 none, 1 land, 2 school fees, 3 house, 4 other."
+      ],
+      "type": "u8",
+      "value": "4"
+    },
+    {
+      "name": "maxNameLen",
+      "type": "u8",
+      "value": "32"
+    },
+    {
+      "name": "maxPurposeLen",
+      "type": "u8",
+      "value": "64"
+    },
+    {
+      "name": "maxSaveBps",
+      "docs": [
+        "Highest savings share: 50% of each transfer."
+      ],
       "type": "u16",
       "value": "5000"
     },
     {
-      "name": "POSITION_SEED",
+      "name": "positionSeed",
       "type": "bytes",
       "value": "[112, 111, 115, 105, 116, 105, 111, 110]"
     },
     {
-      "name": "PROCEEDS_SEED",
+      "name": "proceedsSeed",
       "type": "bytes",
       "value": "[112, 114, 111, 99, 101, 101, 100, 115]"
     },
     {
-      "name": "RULE_SEED",
+      "name": "ruleSeed",
       "type": "bytes",
       "value": "[114, 117, 108, 101]"
     },
     {
-      "name": "SERIES_SEED",
+      "name": "seriesSeed",
       "type": "bytes",
       "value": "[115, 101, 114, 105, 101, 115]"
     },
     {
-      "name": "VAULT_SEED",
+      "name": "vaultSeed",
       "type": "bytes",
       "value": "[118, 97, 117, 108, 116]"
     }
   ]
-}
+};

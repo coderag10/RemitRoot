@@ -1,34 +1,43 @@
 "use client";
 
-// The wallet the visitor acts with: a connected wallet, or a practice wallet made for the demo.
+// The wallet the visitor acts with: their own connected wallet, or a practice wallet made for
+// the demo together with a practice family wallet to send to.
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, PublicKey, Transaction } from "@solana/web3.js";
-import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
-import { connection } from "./program";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
+import { connection } from "./chain/program";
 
 export type Session = {
   mode: "demo" | "wallet";
   publicKey: PublicKey;
-  /** The practice family wallet; a connected wallet types its own recipient. */
-  family: PublicKey | null;
-  /** Signs, sends and confirms. Returns the transaction signature. */
+  /** The practice family wallet in the demo; a connected wallet chooses its own recipient. */
+  demoFamily: PublicKey | null;
+  /** Signs, sends and confirms. Resolves to the signature once confirmed. */
   send: (tx: Transaction) => Promise<string>;
 };
 
-type SessionContext = {
+type SessionContextValue = {
   session: Session | null;
   startDemo: () => Promise<void>;
   leaveDemo: () => void;
+  disconnect: () => Promise<void>;
 };
 
-const Context = createContext<SessionContext | null>(null);
+const SessionContext = createContext<SessionContextValue | null>(null);
 
 /** Asks the faucet route to top `worker` up with test dollars and a little SOL for fees. */
-export async function requestFaucet(worker: PublicKey, recipient?: PublicKey | null) {
+export async function requestFaucet(worker: PublicKey, family?: PublicKey | null) {
   const response = await fetch("/api/faucet", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ worker: worker.toBase58(), recipient: recipient?.toBase58() }),
+    body: JSON.stringify({ worker: worker.toBase58(), family: family?.toBase58() }),
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -38,14 +47,19 @@ export async function requestFaucet(worker: PublicKey, recipient?: PublicKey | n
 
 async function confirm(signature: string, blockhash: string, lastValidBlockHeight: number) {
   const result = await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
-  if (result.value.err) throw new Error(`Transaction failed: ${JSON.stringify(result.value.err)}`);
+  if (result.value.err) {
+    // Fetch the logs so the error can be explained in plain words.
+    const tx = await connection.getTransaction(signature, { maxSupportedTransactionVersion: 0, commitment: "confirmed" });
+    const error = new Error(`Transaction failed: ${JSON.stringify(result.value.err)}`) as Error & { logs?: string[] };
+    error.logs = tx?.meta?.logMessages ?? [];
+    throw error;
+  }
   return signature;
 }
 
+// The practice wallet is kept for this browser tab only, so a refresh mid-flow keeps it. It
+// holds valueless test tokens and is forgotten when the tab closes or the visitor leaves the demo.
 type Demo = { worker: Keypair; family: PublicKey };
-
-// The practice wallet is kept for this browser tab only, so a refresh mid-flow does not lose
-// the savings. It holds valueless test tokens and is gone when the tab closes.
 const DEMO_KEY = "remitroot-demo";
 let demoState: Demo | null | undefined;
 const demoListeners = new Set<() => void>();
@@ -56,10 +70,7 @@ function readDemo(): Demo | null {
   try {
     const stored = JSON.parse(sessionStorage.getItem(DEMO_KEY) ?? "null");
     if (stored) {
-      demoState = {
-        worker: Keypair.fromSecretKey(Uint8Array.from(stored.worker)),
-        family: new PublicKey(stored.family),
-      };
+      demoState = { worker: Keypair.fromSecretKey(Uint8Array.from(stored.worker)), family: new PublicKey(stored.family) };
     }
   } catch {
     // Storage is blocked or the entry is damaged: start without a practice wallet.
@@ -102,13 +113,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     writeDemo({ worker, family });
   }, []);
   const leaveDemo = useCallback(() => writeDemo(null), []);
+  const { disconnect: walletDisconnect } = wallet;
+  const disconnect = useCallback(async () => {
+    writeDemo(null);
+    await walletDisconnect().catch(() => undefined);
+  }, [walletDisconnect]);
 
+  const { publicKey, sendTransaction } = wallet;
   const session = useMemo<Session | null>(() => {
+    // A practice wallet takes priority while it exists, so leaving the demo is explicit.
     if (demo) {
       return {
         mode: "demo",
         publicKey: demo.worker.publicKey,
-        family: demo.family,
+        demoFamily: demo.family,
         send: async (tx) => {
           const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
           tx.feePayer = demo.worker.publicKey;
@@ -119,12 +137,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         },
       };
     }
-    const { publicKey, sendTransaction } = wallet;
     if (!publicKey) return null;
     return {
       mode: "wallet",
       publicKey,
-      family: null,
+      demoFamily: null,
       send: async (tx) => {
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
         tx.feePayer = publicKey;
@@ -133,14 +150,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return confirm(signature, blockhash, lastValidBlockHeight);
       },
     };
-  }, [demo, wallet]);
+  }, [demo, publicKey, sendTransaction]);
 
-  const value = useMemo(() => ({ session, startDemo, leaveDemo }), [session, startDemo, leaveDemo]);
-  return <Context.Provider value={value}>{children}</Context.Provider>;
+  const value = useMemo(() => ({ session, startDemo, leaveDemo, disconnect }), [session, startDemo, leaveDemo, disconnect]);
+  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
-export function useSession(): SessionContext {
-  const context = useContext(Context);
+export function useSession(): SessionContextValue {
+  const context = useContext(SessionContext);
   if (!context) throw new Error("useSession must be used inside SessionProvider");
   return context;
 }

@@ -1,30 +1,28 @@
-// The demo faucet: tops a wallet up with test dollars and a little devnet SOL for fees.
-// It signs with a dedicated faucet key, never the program admin key.
+// The demo faucet: tops a wallet up to a fixed level of test dollars and a little devnet SOL for
+// fees, and opens a token account for the practice family. It signs with a dedicated faucet key
+// (never the program admin key). The mint and token program are read from the program config.
 import {
   AccountLayout,
   createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
-  getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import {
-  Connection,
-  Keypair,
-  LAMPORTS_PER_SOL,
-  PublicKey,
-  SystemProgram,
-  Transaction,
-  sendAndConfirmTransaction,
-} from "@solana/web3.js";
-import { FAUCET_SOL, FAUCET_USD, RPC_URL, USD_DECIMALS, USD_MINT } from "@/lib/config";
-
-const fail = (error: string, status: number) => Response.json({ error }, { status });
+import { Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from "@solana/web3.js";
+import { connection, fetchConfig, usdAccount, type Config } from "@/lib/chain/program";
+import { IS_LOCAL } from "@/lib/env";
 
 // Confirming on a busy test network can take a while.
 export const maxDuration = 30;
 
-// A light brake on one network draining the faucet. It is per server instance, so best effort.
+const fail = (error: string, status: number) => Response.json({ error }, { status });
+
+const FAUCET_USD = Number(process.env.FAUCET_USD ?? 1000);
+const FAUCET_SOL = Number(process.env.FAUCET_SOL ?? 0.01);
+/** Kept back so the faucet can always pay its own fees and new token accounts. */
+const RESERVE_LAMPORTS = 0.01 * LAMPORTS_PER_SOL;
+
+// A light brake on one network draining the faucet. Per server instance, so best effort.
 const WINDOW_MS = 10 * 60_000;
-const MAX_REQUESTS = 20;
+const MAX_REQUESTS = Number(process.env.FAUCET_MAX_REQUESTS ?? 20);
 const recent = new Map<string, number[]>();
 
 function overLimit(request: Request): boolean {
@@ -44,24 +42,25 @@ function parseKey(value: unknown): PublicKey | null {
   }
 }
 
+let config: Config | null = null;
+
 export async function POST(request: Request) {
   const secret = process.env.FAUCET_SECRET_KEY;
   if (!secret) return fail("error.faucetOff", 503);
-  const rpcUrl = process.env.RPC_URL ?? RPC_URL;
-  if (/mainnet/i.test(rpcUrl)) return fail("error.faucetOff", 503);
-
-  if (overLimit(request)) return fail("error.faucetLimit", 429);
+  if (!IS_LOCAL && overLimit(request)) return fail("error.faucetLimit", 429);
 
   const body = await request.json().catch(() => null);
   const worker = parseKey(body?.worker);
-  const recipient = body?.recipient ? parseKey(body.recipient) : null;
-  if (!worker || (body?.recipient && !recipient)) return fail("error.busy", 400);
+  const family = body?.family ? parseKey(body.family) : null;
+  if (!worker || (body?.family && !family)) return fail("error.busy", 400);
 
   try {
+    config ??= await fetchConfig();
+    if (!config) return fail("error.notSetUp", 503);
     const faucet = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(secret)));
-    const connection = new Connection(rpcUrl, "confirmed");
-    const faucetToken = getAssociatedTokenAddressSync(USD_MINT, faucet.publicKey);
-    const workerToken = getAssociatedTokenAddressSync(USD_MINT, worker, true);
+    const decimals = BigInt(10 ** config.decimals);
+    const faucetToken = usdAccount(config, faucet.publicKey);
+    const workerToken = usdAccount(config, worker);
 
     // One request for all four accounts; the public test network limits requests.
     const [workerInfo, workerTokenInfo, faucetInfo, faucetTokenInfo] = await connection.getMultipleAccountsInfo([
@@ -70,32 +69,41 @@ export async function POST(request: Request) {
       faucet.publicKey,
       faucetToken,
     ]);
-    const tokenAmount = (info: typeof workerTokenInfo) => (info ? AccountLayout.decode(info.data).amount : BigInt(0));
-    const workerLamports = workerInfo?.lamports ?? 0;
-    const faucetLamports = faucetInfo?.lamports ?? 0;
-    const workerUsd = tokenAmount(workerTokenInfo);
-    const faucetUsd = tokenAmount(faucetTokenInfo);
+    const tokens = (info: typeof workerTokenInfo) => (info ? AccountLayout.decode(info.data).amount : BigInt(0));
 
     // Top up to a fixed level, so asking again never gives one wallet more than that.
-    const lamports = Math.max(0, Math.round(FAUCET_SOL * LAMPORTS_PER_SOL) - workerLamports);
-    const targetUsd = BigInt(FAUCET_USD) * BigInt(10 ** USD_DECIMALS);
-    const usd = workerUsd < targetUsd ? targetUsd - workerUsd : BigInt(0);
-    // Leave room for the two token accounts the faucet may have to create.
-    if (faucetUsd < usd || faucetLamports < lamports + 0.006 * LAMPORTS_PER_SOL) {
+    const lamports = Math.max(0, Math.round(FAUCET_SOL * LAMPORTS_PER_SOL) - (workerInfo?.lamports ?? 0));
+    const target = BigInt(Math.round(FAUCET_USD)) * decimals;
+    const usd = tokens(workerTokenInfo) < target ? target - tokens(workerTokenInfo) : BigInt(0);
+    if (tokens(faucetTokenInfo) < usd || (faucetInfo?.lamports ?? 0) < lamports + RESERVE_LAMPORTS) {
       return fail("error.faucetEmpty", 503);
     }
 
     const tx = new Transaction();
-    if (lamports > 0) {
-      tx.add(SystemProgram.transfer({ fromPubkey: faucet.publicKey, toPubkey: worker, lamports }));
-    }
-    tx.add(createAssociatedTokenAccountIdempotentInstruction(faucet.publicKey, workerToken, worker, USD_MINT));
-    if (recipient) {
-      const recipientToken = getAssociatedTokenAddressSync(USD_MINT, recipient, true);
-      tx.add(createAssociatedTokenAccountIdempotentInstruction(faucet.publicKey, recipientToken, recipient, USD_MINT));
-    }
+    if (lamports > 0) tx.add(SystemProgram.transfer({ fromPubkey: faucet.publicKey, toPubkey: worker, lamports }));
+    const open = (owner: PublicKey) =>
+      createAssociatedTokenAccountIdempotentInstruction(
+        faucet.publicKey,
+        usdAccount(config!, owner),
+        owner,
+        config!.usdMint,
+        config!.tokenProgram,
+      );
+    tx.add(open(worker));
+    if (family) tx.add(open(family));
     if (usd > BigInt(0)) {
-      tx.add(createTransferCheckedInstruction(faucetToken, USD_MINT, workerToken, faucet.publicKey, usd, USD_DECIMALS));
+      tx.add(
+        createTransferCheckedInstruction(
+          faucetToken,
+          config.usdMint,
+          workerToken,
+          faucet.publicKey,
+          usd,
+          config.decimals,
+          [],
+          config.tokenProgram,
+        ),
+      );
     }
     const signature = await sendAndConfirmTransaction(connection, tx, [faucet]);
     return Response.json({ signature });

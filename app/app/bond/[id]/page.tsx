@@ -1,115 +1,103 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { Suspense, useCallback } from "react";
-import { Amount, Card, ErrorNotice, Skeleton } from "@/components/ui";
-import { explorerAddress } from "@/lib/config";
-import { errorText } from "@/lib/errors";
-import { formatDate, formatUsd } from "@/lib/format";
-import { useLoad, useNow } from "@/lib/hooks";
-import { t } from "@/lib/i18n";
-import { fetchBondState } from "@/lib/program";
+import { Suspense } from "react";
+import { ActivityList } from "@/components/ActivityList";
+import { ProceedsList, SolvencyMeter, StatusPill } from "@/components/Bond";
+import { Amount, Progress } from "@/components/ui/Amount";
+import { TextLink } from "@/components/ui/Button";
+import { Card, CardTitle } from "@/components/ui/Card";
+import { EmptyState, ErrorNotice, Skeleton } from "@/components/ui/States";
+import { errorKey } from "@/lib/chain/errors";
+import { explorerAddress } from "@/lib/env";
+import { formatDate, formatNumber, formatPercent, formatUsd, formatUsdWhole, shortAddress } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { owedNow, useActivity, useBond, useNow } from "@/lib/queries";
 
 function Bond() {
+  const { t, locale } = useI18n();
   const { id } = useParams<{ id: string }>();
-  const now = useNow(30_000);
-  const load = useCallback(
-    async () => (/^\d+$/.test(id) ? fetchBondState(Number(id), Math.floor(Date.now() / 1000)) : null),
-    [id],
-  );
-  const { data, error, loading, reload } = useLoad(load);
+  const seriesId = /^\d+$/.test(id) ? Number(id) : null;
+  const now = useNow();
+  const bond = useBond(seriesId);
+  const activity = useActivity(bond.data?.series.address ?? null, 25);
 
-  if (loading && !data) {
+  if (seriesId === null || bond.data === null) return <ErrorNotice message={t("bond.notFound")} />;
+  if (bond.error && !bond.data) return <ErrorNotice message={t(errorKey(bond.error))} onRetry={() => void bond.refetch()} />;
+  if (!bond.data) {
     return (
       <Card>
-        <Skeleton lines={6} />
+        <Skeleton lines={8} />
       </Card>
     );
   }
-  if (!data) {
-    return <ErrorNotice message={error ? errorText(error) : t("bond.notFound")} onRetry={error ? reload : undefined} />;
-  }
 
-  const { series, vault, proceeds, owed } = data;
+  const { series, vault, proceeds, positions } = bond.data;
   const matured = now >= series.maturityTs;
-  const raisedPercent = series.cap > BigInt(0) ? Number((series.totalPrincipal * BigInt(100)) / series.cap) : 0;
+  const owed = owedNow(positions, series, now);
 
   return (
     <>
-      <div>
-        <h1 className="text-title font-bold text-root-deep">{series.name}</h1>
+      <TextLink href="/bond" className="-mb-3 self-start">
+        ← {t("bond.back")}
+      </TextLink>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-title font-bold leading-tight text-root-deep">{series.name}</h1>
+          <StatusPill series={series} now={now} />
+        </div>
         <p className="text-stone">
-          {t("bond.rate", { rate: series.couponBps / 100 })} ·{" "}
-          {t(matured ? "bond.maturedOn" : "bond.matures", { date: formatDate(series.maturityTs) })}
+          {t("bond.rate", { rate: formatPercent(series.couponBps, locale) })} ·{" "}
+          {t(matured ? "bond.maturedOn" : "bond.matures", { date: formatDate(series.maturityTs, locale) })}
         </p>
       </div>
 
       <Card className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <p className="font-semibold">
-            {t("bond.raised", { raised: formatUsd(series.totalPrincipal), cap: formatUsd(series.cap) })}
+          <p className="tabular font-semibold">
+            {t("bond.raised", { raised: formatUsd(series.totalPrincipal, locale), cap: formatUsdWhole(series.cap, locale) })}
           </p>
-          <div
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={raisedPercent}
-            className="h-4 overflow-hidden rounded-full bg-line"
-          >
-            <div className="h-full bg-root" style={{ width: `${Math.min(100, raisedPercent)}%` }} />
-          </div>
+          <Progress value={series.totalPrincipal} max={series.cap} label={t("bond.raised", { raised: formatUsd(series.totalPrincipal, locale), cap: formatUsdWhole(series.cap, locale) })} />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Amount label={t("bond.savers")} value={String(series.saverCount)} />
-          <Amount label={t("bond.used")} value={formatUsd(series.totalWithdrawn)} />
-          <Amount label={t("bond.vault")} value={formatUsd(vault)} tone="root" />
-          <Amount label={t("bond.owed")} value={formatUsd(owed)} />
+          <Amount label={t("bond.savers")} value={formatNumber(series.saverCount, locale)} />
+          <Amount label={t("bond.used")} value={formatUsd(series.totalWithdrawn, locale)} />
+          <Amount label={t("bond.repaid")} value={formatUsd(series.totalRepaid, locale)} />
+          <Amount label={t("bond.interestPaid")} value={formatUsd(series.interestPaid, locale)} />
         </div>
-        <p className="text-label text-stone">{t("bond.owedNote")}</p>
       </Card>
 
-      <Card className="flex flex-col gap-3">
-        <h2 className="text-heading font-semibold text-root-deep">{t("bond.proceeds.title")}</h2>
-        {proceeds.length === 0 ? (
-          <p className="text-stone">{t("bond.proceeds.empty")}</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-line">
-            {proceeds.map((record) => (
-              <li key={record.index} className="flex flex-col py-2">
-                <span className="flex justify-between gap-3">
-                  <span className="font-semibold">{record.purpose}</span>
-                  <span className="font-bold tabular-nums">{formatUsd(record.amount)}</span>
-                </span>
-                <a
-                  href={explorerAddress(record.address)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex min-h-[48px] items-center text-label text-root underline"
-                >
-                  {formatDate(record.ts)}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+      <Card labelledBy="solvency-title">
+        <CardTitle id="solvency-title">{t("bond.solvency.title")}</CardTitle>
+        <SolvencyMeter vault={vault} owed={owed} />
       </Card>
 
-      <a
-        href={explorerAddress(series.address)}
-        target="_blank"
-        rel="noreferrer"
-        className="flex min-h-[48px] items-center font-semibold text-root underline"
-      >
-        {t("bond.verify")}
-      </a>
-      <p className="text-label text-stone">{t("bond.testNote")}</p>
+      <Card labelledBy="proceeds-title">
+        <CardTitle id="proceeds-title">{t("bond.proceeds.title")}</CardTitle>
+        {proceeds.length === 0 ? <EmptyState icon="issuer">{t("bond.proceeds.empty")}</EmptyState> : <ProceedsList records={proceeds} />}
+      </Card>
+
+      {activity.data?.some((item) => item.kind === "repaid" || item.kind === "redeemed" || item.kind === "withdrawn") && (
+        <Card labelledBy="bond-activity">
+          <CardTitle id="bond-activity">{t("history.recent")}</CardTitle>
+          <ActivityList items={activity.data} perspective="bond" limit={8} />
+        </Card>
+      )}
+
+      <div className="flex flex-col">
+        <p className="tabular text-label text-stone">{t("bond.issuer", { address: shortAddress(series.issuer) })}</p>
+        <TextLink href={explorerAddress(series.address)} external>
+          {t("bond.verify")}
+        </TextLink>
+        <p className="text-label text-stone">{t("bond.testNote")}</p>
+      </div>
     </>
   );
 }
 
 export default function BondPage() {
   return (
-    <Suspense fallback={<Skeleton lines={6} />}>
+    <Suspense fallback={<Skeleton lines={8} />}>
       <Bond />
     </Suspense>
   );

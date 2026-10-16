@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Mukta } from "next/font/google";
 import { Banner } from "@/components/Banner";
-import { Header } from "@/components/Header";
+import { BottomNav, Footer, Header } from "@/components/Navigation";
 import { Providers } from "@/components/Providers";
-import { t } from "@/lib/i18n";
+import { Toasts } from "@/components/Toasts";
+import en from "@/lib/i18n/en.json";
 import "./globals.css";
 
 const mukta = Mukta({
@@ -13,20 +14,23 @@ const mukta = Mukta({
 });
 
 export const metadata: Metadata = {
-  title: "RemitRoot",
-  description: `${t("tagline")} ${t("banner")}`,
+  title: { default: "RemitRoot", template: "%s · RemitRoot" },
+  description: en["meta.description"],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const viewport: Viewport = { themeColor: "#1F5C4A", width: "device-width", initialScale: 1 };
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${mukta.variable} h-full antialiased`}>
       <body className="min-h-full font-sans">
-        <Banner />
         <Providers>
-          <div className="mx-auto flex w-full max-w-[480px] flex-col gap-6 px-4 pb-12 pt-4">
-            <Header />
-            <main className="flex flex-col gap-6">{children}</main>
-          </div>
+          <Banner />
+          <Header />
+          <main className="mx-auto flex w-full max-w-[480px] flex-col gap-5 px-4 pt-5">{children}</main>
+          <Footer />
+          <BottomNav />
+          <Toasts />
         </Providers>
       </body>
     </html>
